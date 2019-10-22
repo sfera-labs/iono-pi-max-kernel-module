@@ -1,0 +1,1 @@
+SUBSYSTEM=="ionopimax", PROGRAM="/bin/sh -c 'find -L /sys/class/ionopimax/ -maxdepth 2 -exec chown root:ionopimax {} \; -exec chmod 770 {} \; || true'"
