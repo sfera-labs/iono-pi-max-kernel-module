@@ -23,6 +23,7 @@
 
 #define MODEL_NUM 10 // TODO set actual model num for iono pi max
 
+#define SOFT_UART_BOUDRATE 4800
 #define SOFT_UART_RX_BUFF_SIZE 	100
 
 #define FW_MAX_SIZE 16000
@@ -41,8 +42,8 @@
 #define GPIO_BUTTON -1
 #define GPIO_I2CEXP_ENABLE -1
 #define GPIO_I2CEXP_FEEDBACK -1
-#define GPIO_SOFTSERIAL_TX 33
-#define GPIO_SOFTSERIAL_RX 37
+#define GPIO_SOFTSERIAL_TX 37
+#define GPIO_SOFTSERIAL_RX 33
 #define GPIO_USB1_DISABLE 31
 #define GPIO_USB1_FAULT 1
 #define GPIO_USB2_DISABLE 30
@@ -115,6 +116,7 @@ static struct device_attribute devAttrUsb1Ok;
 static struct device_attribute devAttrUsb2Disabled;
 static struct device_attribute devAttrUsb2Ok;
 
+static struct device_attribute devAttrMcuCmd;
 static struct device_attribute devAttrMcuConfig;
 static struct device_attribute devAttrMcuFwVersion;
 static struct device_attribute devAttrMcuFwInstall;
@@ -365,7 +367,7 @@ static bool softUartSendAndWait(const char *cmd, int cmdLen, int respLen,
 		printk(KERN_INFO "ionopimax: - | soft uart >>> %s\n", cmd);;
 	}
 	raspberry_soft_uart_send_string(cmd, cmdLen);
-	while (softUartRxBuffIdx < respLen && waitTime < timeout) {
+	while ((softUartRxBuffIdx < respLen || respLen < 0) && waitTime < timeout) {
 		msleep(20);
 		waitTime += 20;
 	}
@@ -374,7 +376,26 @@ static bool softUartSendAndWait(const char *cmd, int cmdLen, int respLen,
 	if (print) {
 		printk(KERN_INFO "ionopimax: - | soft uart <<< %s\n", softUartRxBuff);;
 	}
-	return softUartRxBuffIdx == respLen;
+	return softUartRxBuffIdx == respLen || respLen < 0;
+}
+
+static ssize_t MCU_cmd(struct device* dev, struct device_attribute* attr,
+		const char *buf, size_t count) {
+	ssize_t ret;
+
+	if (!mutex_trylock(&mcuMutex)) {
+		printk(KERN_ALERT "ionopimax: * | MCU busy\n");
+		return -EBUSY;
+	}
+
+	if (!softUartSendAndWait(buf, count, -1, 1000, true)) {
+		ret = -EIO;
+	} else {
+		ret = count;
+	}
+
+	mutex_unlock(&mcuMutex);
+	return ret;
 }
 
 static ssize_t MCU_show(struct device* dev, struct device_attribute* attr,
@@ -1029,6 +1050,15 @@ static struct device_attribute devAttrUsb2Ok = { //
 				.store = NULL, //
 		};
 
+static struct device_attribute devAttrMcuCmd = { //
+		.attr = { //
+				.name = "cmd", //
+						.mode = 0220, //
+				},//
+				.show = NULL, //
+				.store = MCU_cmd, //
+		};
+
 static struct device_attribute devAttrMcuConfig = { //
 		.attr = { //
 				.name = "config", //
@@ -1117,6 +1147,7 @@ static void cleanup(void) {
 	}
 
 	if (pMcuDevice && !IS_ERR(pMcuDevice)) {
+		device_remove_file(pMcuDevice, &devAttrMcuCmd);
 		device_remove_file(pMcuDevice, &devAttrMcuConfig);
 		device_remove_file(pMcuDevice, &devAttrMcuFwVersion);
 		device_remove_file(pMcuDevice, &devAttrMcuFwInstall);
@@ -1151,7 +1182,7 @@ static bool softUartInit(void) {
 	if (!raspberry_soft_uart_init(GPIO_SOFTSERIAL_TX, GPIO_SOFTSERIAL_RX)) {
 		return false;
 	}
-	if (!raspberry_soft_uart_set_baudrate(1200)) {
+	if (!raspberry_soft_uart_set_baudrate(SOFT_UART_BOUDRATE)) {
 		raspberry_soft_uart_finalize();
 		return false;
 	}
@@ -1228,6 +1259,7 @@ static int __init ionopimax_init(void) {
 	result |= device_create_file(pSdDevice, &devAttrSdSdxRouting);
 	result |= device_create_file(pSdDevice, &devAttrSdSdxDefault);
 
+	result |= device_create_file(pMcuDevice, &devAttrMcuCmd);
 	result |= device_create_file(pMcuDevice, &devAttrMcuConfig);
 	result |= device_create_file(pMcuDevice, &devAttrMcuFwVersion);
 	result |= device_create_file(pMcuDevice, &devAttrMcuFwInstall);
