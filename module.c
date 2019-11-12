@@ -52,7 +52,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.0");
+MODULE_VERSION("0.2");
 
 static struct class *pDeviceClass;
 
@@ -379,7 +379,19 @@ static bool softUartSendAndWait(const char *cmd, int cmdLen, int respLen,
 	return softUartRxBuffIdx == respLen || respLen < 0;
 }
 
-static ssize_t MCU_cmd(struct device* dev, struct device_attribute* attr,
+static ssize_t MCU_cmd_show(struct device* dev, struct device_attribute* attr,
+		char *buf) {
+	ssize_t ret;
+	if (!mutex_trylock(&mcuMutex)) {
+		printk(KERN_ALERT "ionopimax: * | MCU busy\n");
+		return -EBUSY;
+	}
+	ret = sprintf(buf, "%s", softUartRxBuff);
+	mutex_unlock(&mcuMutex);
+	return ret;
+}
+
+static ssize_t MCU_cmd_store(struct device* dev, struct device_attribute* attr,
 		const char *buf, size_t count) {
 	ssize_t ret;
 
@@ -388,7 +400,7 @@ static ssize_t MCU_cmd(struct device* dev, struct device_attribute* attr,
 		return -EBUSY;
 	}
 
-	if (!softUartSendAndWait(buf, count, -1, 1000, true)) {
+	if (!softUartSendAndWait(buf, count, -1, 500, true)) {
 		ret = -EIO;
 	} else {
 		ret = count;
@@ -434,7 +446,8 @@ static ssize_t MCU_show(struct device* dev, struct device_attribute* attr,
 
 static ssize_t MCU_store(struct device* dev, struct device_attribute* attr,
 		const char *buf, size_t count) {
-	ssize_t ret = 0;
+	ssize_t ret = count;
+	size_t len = count;
 	int i;
 	int padd;
 	int prefixLen = 3;
@@ -446,11 +459,19 @@ static ssize_t MCU_store(struct device* dev, struct device_attribute* attr,
 	if (cmdLen == 5) {
 		prefixLen = 4;
 	}
-	padd = cmdLen - prefixLen - (count - 1);
+	while (len > 0
+			&& (buf[len - 1] == '\n' || buf[len - 1] == '\r'
+					|| buf[len - 1] == ' ')) {
+		len--;
+	}
+	if (len < 1) {
+		return -EINVAL;
+	}
+	padd = cmdLen - prefixLen - len;
 	if (padd < 0 || padd > 4) {
 		return -EINVAL;
 	}
-	for (i = 0; i < count - 1; i++) {
+	for (i = 0; i < len; i++) {
 		cmd[prefixLen + padd + i] = toUpper(buf[i]);
 	}
 	cmd[prefixLen + padd + i] = '\0';
@@ -469,17 +490,14 @@ static ssize_t MCU_store(struct device* dev, struct device_attribute* attr,
 				break;
 			}
 		}
-		if (ret == 0) {
-			for (i = 0; i < count - 1; i++) {
+		if (ret == count) {
+			for (i = 0; i < len; i++) {
 				if (softUartRxBuff[prefixLen + padd + i] != toUpper(buf[i])) {
 					ret = -EIO;
 					break;
 				}
 			}
 		}
-	}
-	if (ret == 0) {
-		ret = count;
 	}
 	mutex_unlock(&mcuMutex);
 	return ret;
@@ -561,7 +579,7 @@ static ssize_t fwInstall_store(struct device* dev,
 	}
 
 	buff_i = 0;
-	while (buff_i < bufLen - 1) {
+	while (buff_i < bufLen) {
 		if (fwLineIdx == 0 && buf[buff_i++] != ':') {
 			continue;
 		}
@@ -1053,10 +1071,10 @@ static struct device_attribute devAttrUsb2Ok = { //
 static struct device_attribute devAttrMcuCmd = { //
 		.attr = { //
 				.name = "cmd", //
-						.mode = 0220, //
+						.mode = 0660, //
 				},//
-				.show = NULL, //
-				.store = MCU_cmd, //
+				.show = MCU_cmd_show, //
+				.store = MCU_cmd_store, //
 		};
 
 static struct device_attribute devAttrMcuConfig = { //
