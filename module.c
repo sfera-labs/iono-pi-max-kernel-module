@@ -15,6 +15,7 @@
 
 #include <linux/delay.h>
 #include <linux/gpio.h>
+#include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -52,11 +53,12 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("0.2");
+MODULE_VERSION("0.3");
 
 static struct class *pDeviceClass;
 
 static struct device *pBuzzerDevice = NULL;
+static struct device *pIoDevice = NULL;
 static struct device *pWatchdogDevice = NULL;
 static struct device *pRs485Device = NULL;
 static struct device *pPowerDevice = NULL;
@@ -83,6 +85,16 @@ static struct device_attribute devAttrWatchdogSdSwitch;
 
 static struct device_attribute devAttrRs485Mode;
 static struct device_attribute devAttrRs485Params;
+
+static struct device_attribute devAttrIoAv0;
+static struct device_attribute devAttrIoAv1;
+static struct device_attribute devAttrIoAv2;
+static struct device_attribute devAttrIoAv3;
+
+static struct device_attribute devAttrIoAi0;
+static struct device_attribute devAttrIoAi1;
+static struct device_attribute devAttrIoAi2;
+static struct device_attribute devAttrIoAi3;
 
 static struct device_attribute devAttrPowerDownEnabled;
 static struct device_attribute devAttrPowerDownDelay;
@@ -133,6 +145,27 @@ static int fwMaxAddr = 0;
 static char fwLine[FW_MAX_LINE_LEN];
 static int fwLineIdx = 0;
 volatile static int fwProgress = 0;
+
+static uint8_t avDr = 0b100;
+static uint8_t avPga = 0b010;
+
+static uint8_t aiDr = 0b100;
+static uint8_t aiPga = 0b010;
+
+struct i2c_client* av_i2c_client;
+struct i2c_client* ai_i2c_client;
+
+static struct i2c_board_info av_i2c_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("_vitual_ads1115", 0x50),
+	}
+};
+
+static struct i2c_board_info ai_i2c_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("_vitual_ads1115", 0x51),
+	}
+};
 
 static char toUpper(char c) {
 	if (c >= 97 && c <= 122) {
@@ -349,6 +382,93 @@ static ssize_t GPIOBlink_store(struct device* dev,
 		}
 	}
 	return count;
+}
+
+static ssize_t ADS1115_show(struct device* dev, struct device_attribute* attr,
+		char *buf) {
+	struct i2c_client* i2c_client;
+	uint8_t addr = 0;
+	uint8_t mux;
+	uint8_t dr;
+	uint8_t pga;
+	uint16_t config;
+	int32_t res;
+
+	if (dev == pIoDevice) {
+		if (attr == &devAttrIoAv0) {
+			i2c_client = av_i2c_client;
+			addr = 0x50;
+			mux = 0x04;
+			pga = avPga;
+			dr = avDr;
+		} else if (attr == &devAttrIoAv1) {
+			i2c_client = av_i2c_client;
+			addr = 0x50;
+			mux = 0x05;
+			pga = avPga;
+			dr = avDr;
+		} else if (attr == &devAttrIoAv2) {
+			i2c_client = av_i2c_client;
+			addr = 0x50;
+			mux = 0x06;
+			pga = avPga;
+			dr = avDr;
+		} else if (attr == &devAttrIoAv3) {
+			i2c_client = av_i2c_client;
+			addr = 0x50;
+			mux = 0x07;
+			pga = avPga;
+			dr = avDr;
+		} else if (attr == &devAttrIoAi0) {
+			i2c_client = ai_i2c_client;
+			addr = 0x51;
+			mux = 0x04;
+			pga = aiPga;
+			dr = aiDr;
+		} else if (attr == &devAttrIoAi1) {
+			i2c_client = ai_i2c_client;
+			addr = 0x51;
+			mux = 0x05;
+			pga = aiPga;
+			dr = aiDr;
+		} else if (attr == &devAttrIoAi2) {
+			i2c_client = ai_i2c_client;
+			addr = 0x51;
+			mux = 0x06;
+			pga = aiPga;
+			dr = aiDr;
+		} else if (attr == &devAttrIoAi3) {
+			i2c_client = ai_i2c_client;
+			addr = 0x51;
+			mux = 0x07;
+			pga = aiPga;
+			dr = aiDr;
+		}
+	}
+
+	if (addr == 0) {
+		return -EINVAL;
+	}
+
+	config = (((dr << 5) & 0x03) << 8) | (0b10000001 | (pga << 1) | (mux << 4));
+
+	if (i2c_smbus_write_word_data(i2c_client, 0x01, config) < 0) {
+		return -EIO;
+	}
+
+	// TODO add delay?
+
+	res = i2c_smbus_read_word_data(i2c_client, 0x00);
+
+	if (res < 0) {
+		return -EIO;
+	}
+
+	res = ((res & 0xFF) << 8) + ((res & 0xFF00) >> 8);
+
+	// TODO multiply by conversion factor
+
+	return sprintf(buf, "%d\n", (int16_t) res);
 }
 
 static void softUartRxCallback(unsigned char character) {
@@ -780,6 +900,78 @@ static struct device_attribute devAttrBuzzerBeep = { //
 				.store = GPIOBlink_store, //
 		};
 
+static struct device_attribute devAttrIoAv0 = { //
+		.attr = { //
+				.name = "av0", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAv1 = { //
+		.attr = { //
+				.name = "av1", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAv2 = { //
+		.attr = { //
+				.name = "av2", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAv3 = { //
+		.attr = { //
+				.name = "av3", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAi0 = { //
+		.attr = { //
+				.name = "ai0", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAi1 = { //
+		.attr = { //
+				.name = "ai1", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAi2 = { //
+		.attr = { //
+				.name = "ai2", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
+static struct device_attribute devAttrIoAi3 = { //
+		.attr = { //
+				.name = "ai3", //
+						.mode = 0440, //
+				},//
+				.show = ADS1115_show, //
+				.store = NULL, //
+		};
+
 static struct device_attribute devAttrWatchdogEnabled = { //
 		.attr = { //
 				.name = "enabled", //
@@ -1114,6 +1306,14 @@ static struct device_attribute devAttrMcuFwInstallProgress = { //
 		};
 
 static void cleanup(void) {
+	if (av_i2c_client) {
+		i2c_unregister_device(av_i2c_client);
+	}
+
+	if (ai_i2c_client) {
+		i2c_unregister_device(ai_i2c_client);
+	}
+
 	if (pBuzzerDevice && !IS_ERR(pBuzzerDevice)) {
 		device_remove_file(pBuzzerDevice, &devAttrBuzzerStatus);
 		device_remove_file(pBuzzerDevice, &devAttrBuzzerBeep);
@@ -1122,6 +1322,20 @@ static void cleanup(void) {
 
 		gpio_unexport(GPIO_BUZZER);
 		gpio_free(GPIO_BUZZER);
+	}
+
+	if (pIoDevice && !IS_ERR(pIoDevice)) {
+		device_remove_file(pIoDevice, &devAttrIoAv0);
+		device_remove_file(pIoDevice, &devAttrIoAv1);
+		device_remove_file(pIoDevice, &devAttrIoAv2);
+		device_remove_file(pIoDevice, &devAttrIoAv3);
+
+		device_remove_file(pIoDevice, &devAttrIoAi0);
+		device_remove_file(pIoDevice, &devAttrIoAi1);
+		device_remove_file(pIoDevice, &devAttrIoAi2);
+		device_remove_file(pIoDevice, &devAttrIoAi3);
+
+		device_destroy(pDeviceClass, 0);
 	}
 
 	if (pWatchdogDevice && !IS_ERR(pWatchdogDevice)) {
@@ -1209,12 +1423,23 @@ static bool softUartInit(void) {
 }
 
 static int __init ionopimax_init(void) {
+	struct i2c_adapter* i2cAdapter1;
 	int result = 0;
 	softUartInitialized = false;
 
 	printk(KERN_INFO "ionopimax: - | init\n");
 
 	mutex_init(&mcuMutex);
+
+	i2cAdapter1 = i2c_get_adapter(1);
+	av_i2c_client = i2c_new_device(i2cAdapter1, av_i2c_board_info);
+	ai_i2c_client = i2c_new_device(i2cAdapter1, ai_i2c_board_info);
+
+	if (av_i2c_client == NULL || ai_i2c_client == NULL) {
+		printk(KERN_ALERT "ionopimax: * | error creating I2C clients\n");
+		result = -1;
+		goto fail;
+	}
 
 	if (!raspberry_soft_uart_set_rx_callback(&softUartRxCallback)) {
 		printk(KERN_ALERT "ionopimax: * | error setting soft UART callback\n");
@@ -1238,13 +1463,14 @@ static int __init ionopimax_init(void) {
 	}
 
 	pBuzzerDevice = device_create(pDeviceClass, NULL, 0, NULL, "buzzer");
+	pIoDevice = device_create(pDeviceClass, NULL, 0, NULL, "io");
 	pWatchdogDevice = device_create(pDeviceClass, NULL, 0, NULL, "watchdog");
 	pPowerDevice = device_create(pDeviceClass, NULL, 0, NULL, "power");
 	pRs485Device = device_create(pDeviceClass, NULL, 0, NULL, "rs485");
 	pSdDevice = device_create(pDeviceClass, NULL, 0, NULL, "sd");
 	pMcuDevice = device_create(pDeviceClass, NULL, 0, NULL, "mcu");
 
-	if (IS_ERR(pBuzzerDevice) || IS_ERR(pWatchdogDevice) || IS_ERR(pPowerDevice) ||
+	if (IS_ERR(pBuzzerDevice) || IS_ERR(pIoDevice) || IS_ERR(pWatchdogDevice) || IS_ERR(pPowerDevice) ||
 			IS_ERR(pSdDevice) || IS_ERR(pRs485Device) || IS_ERR(pMcuDevice)) {
 		printk(KERN_ALERT "ionopimax: * | failed to create devices\n");
 		result = -1;
@@ -1253,6 +1479,16 @@ static int __init ionopimax_init(void) {
 
 	result |= device_create_file(pBuzzerDevice, &devAttrBuzzerStatus);
 	result |= device_create_file(pBuzzerDevice, &devAttrBuzzerBeep);
+
+	result |= device_create_file(pIoDevice, &devAttrIoAv0);
+	result |= device_create_file(pIoDevice, &devAttrIoAv1);
+	result |= device_create_file(pIoDevice, &devAttrIoAv2);
+	result |= device_create_file(pIoDevice, &devAttrIoAv3);
+
+	result |= device_create_file(pIoDevice, &devAttrIoAi0);
+	result |= device_create_file(pIoDevice, &devAttrIoAi1);
+	result |= device_create_file(pIoDevice, &devAttrIoAi2);
+	result |= device_create_file(pIoDevice, &devAttrIoAi3);
 
 	result |= device_create_file(pWatchdogDevice, &devAttrWatchdogEnabled);
 	result |= device_create_file(pWatchdogDevice, &devAttrWatchdogHeartbeat);
