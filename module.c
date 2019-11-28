@@ -456,9 +456,15 @@ static ssize_t ADS1115_show(struct device* dev, struct device_attribute* attr,
 		return -EIO;
 	}
 
-	// TODO add delay?
+	// TODO add delay? How long?
 
 	res = i2c_smbus_read_word_data(i2c_client, 0x00);
+
+	// TODO For continuous mode check
+	// https://linuxtv.org/downloads/v4l-dvb-internals/device-drivers/API-i2c-master-recv.html
+	// https://linuxtv.org/downloads/v4l-dvb-internals/device-drivers/API-i2c-master-send.html
+	// Try setting the Address Pointer register to 0 (Conversion register) with i2c_master_send()
+	// and then read 2 bytes with i2c_master_recv() repeatedly
 
 	if (res < 0) {
 		return -EIO;
