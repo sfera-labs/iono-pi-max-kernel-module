@@ -22,7 +22,7 @@
 
 #include "soft_uart/raspberry_soft_uart.h"
 
-#define I2C_LOCAL_ADDR 0x52
+#define I2C_ADDR_LOCAL 0x35
 
 #define MODEL_NUM 10 // TODO set actual model num for iono pi max
 
@@ -62,7 +62,6 @@ static struct class *pDeviceClass;
 static struct device *pBuzzerDevice = NULL;
 static struct device *pIoDevice = NULL;
 static struct device *pWatchdogDevice = NULL;
-static struct device *pRs485Device = NULL;
 static struct device *pPowerDevice = NULL;
 static struct device *pUpsDevice = NULL;
 static struct device *pRelayDevice = NULL;
@@ -84,9 +83,6 @@ static struct device_attribute devAttrWatchdogEnableMode;
 static struct device_attribute devAttrWatchdogTimeout;
 static struct device_attribute devAttrWatchdogDownDelay;
 static struct device_attribute devAttrWatchdogSdSwitch;
-
-static struct device_attribute devAttrRs485Mode;
-static struct device_attribute devAttrRs485Params;
 
 static struct device_attribute devAttrIoAv0;
 static struct device_attribute devAttrIoAv1;
@@ -131,6 +127,8 @@ static struct device_attribute devAttrUsb2Disabled;
 static struct device_attribute devAttrUsb2Ok;
 
 static struct device_attribute devAttrMcuCmd;
+static struct device_attribute devAttrMcuI2cRead;
+static struct device_attribute devAttrMcuI2cWrite;
 static struct device_attribute devAttrMcuConfig;
 static struct device_attribute devAttrMcuFwVersion;
 static struct device_attribute devAttrMcuFwInstall;
@@ -148,7 +146,11 @@ static char fwLine[FW_MAX_LINE_LEN];
 static int fwLineIdx = 0;
 volatile static int fwProgress = 0;
 
-struct i2c_client* ionopimax_i2c_client = NULL;
+struct i2c_client *ionopimax_i2c_client = NULL;
+
+struct ionopimax_i2c_data {
+	struct mutex update_lock;
+};
 
 static char toUpper(char c) {
 	if (c >= 97 && c <= 122) {
@@ -199,106 +201,6 @@ static int getGPIO(struct device* dev, struct device_attribute* attr) {
 			return GPIO_USB2_DISABLE;
 		} else if (attr == &devAttrUsb2Ok) {
 			return GPIO_USB2_FAULT;
-		}
-	}
-	return -1;
-}
-
-static int getMcuCmd(struct device* dev, struct device_attribute* attr,
-		char *cmd) {
-	if (dev == pRs485Device) {
-		if (attr == &devAttrRs485Mode) {
-			cmd[1] = 'S';
-			cmd[2] = 'M';
-			return 4;
-		} else if (attr == &devAttrRs485Params) {
-			cmd[1] = 'S';
-			cmd[2] = 'P';
-			return 7;
-		}
-	} else if (dev == pPowerDevice) {
-		if (attr == &devAttrPowerDownEnableMode) {
-			cmd[1] = 'P';
-			cmd[2] = 'E';
-			return 4;
-		} else if (attr == &devAttrPowerDownDelay) {
-			cmd[1] = 'P';
-			cmd[2] = 'W';
-			return 8;
-		} else if (attr == &devAttrPowerOffTime) {
-			cmd[1] = 'P';
-			cmd[2] = 'O';
-			return 8;
-		} else if (attr == &devAttrPowerUpDelay) {
-			cmd[1] = 'P';
-			cmd[2] = 'U';
-			return 8;
-		} else if (attr == &devAttrPowerUpMode) {
-			cmd[1] = 'P';
-			cmd[2] = 'P';
-			return 4;
-		} else if (attr == &devAttrPowerSdSwitch) {
-			cmd[1] = 'P';
-			cmd[2] = 'S';
-			cmd[3] = 'D';
-			return 5;
-		}
-	} else if (dev == pWatchdogDevice) {
-		if (attr == &devAttrWatchdogEnableMode) {
-			cmd[1] = 'W';
-			cmd[2] = 'E';
-			return 4;
-		} else if (attr == &devAttrWatchdogTimeout) {
-			cmd[1] = 'W';
-			cmd[2] = 'H';
-			return 8;
-		} else if (attr == &devAttrWatchdogDownDelay) {
-			cmd[1] = 'W';
-			cmd[2] = 'W';
-			return 8;
-		} else if (attr == &devAttrWatchdogSdSwitch) {
-			cmd[1] = 'W';
-			cmd[2] = 'S';
-			cmd[3] = 'D';
-			return 5;
-		}
-	} else if (dev == pUpsDevice) {
-		if (attr == &devAttrUpsPowerDelay) {
-			cmd[1] = 'U';
-			cmd[2] = 'B';
-			return 8;
-		}
-	} else if (dev == pSdDevice) {
-		if (attr == &devAttrSdSdxEnabled) {
-			cmd[1] = 'S';
-			cmd[2] = 'D';
-			cmd[3] = '0';
-			return 5;
-		} else if (attr == &devAttrSdSd1Enabled) {
-			cmd[1] = 'S';
-			cmd[2] = 'D';
-			cmd[3] = '1';
-			return 5;
-		} else if (attr == &devAttrSdSdxRouting) {
-			cmd[1] = 'S';
-			cmd[2] = 'D';
-			cmd[3] = 'R';
-			return 5;
-		} else if (attr == &devAttrSdSdxDefault) {
-			cmd[1] = 'S';
-			cmd[2] = 'D';
-			cmd[3] = 'P';
-			return 5;
-		}
-	} else if (dev == pMcuDevice) {
-		if (attr == &devAttrMcuConfig) {
-			cmd[1] = 'C';
-			cmd[2] = 'C';
-			return 4;
-		} else if (attr == &devAttrMcuFwVersion) {
-			cmd[1] = 'F';
-			cmd[2] = 'W';
-			return 9;
 		}
 	}
 	return -1;
@@ -367,61 +269,122 @@ static ssize_t GPIOBlink_store(struct device* dev,
 	return count;
 }
 
-static ssize_t I2C_show(struct device* dev, struct device_attribute* attr,
-		char *buf) {
-	uint8_t reg;
-	uint8_t size = 0xff;
-	bool sign;
+static int32_t ionopimax_i2c_read(uint8_t reg) {
 	int32_t res;
+	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
 
-	if (dev == pIoDevice) {
-		if (attr == &devAttrIoAv0) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAv1) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAv2) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAv3) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAi0) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAi1) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAi2) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		} else if (attr == &devAttrIoAi3) {
-			reg = 0;
-			size = 2;
-			sign = true;
-		}
+	if (!mutex_trylock(&data->update_lock)) {
+		printk(KERN_ALERT "stratopi: * | I2C busy\n");
+		return -EBUSY;
 	}
 
-	if (size == 0xff) {
-		return -EINVAL;
-	}
+	printk(KERN_INFO "ionopimax: - | I2C read reg=%u\n", reg);
 
-	if (size == 1) {
-		res = i2c_smbus_read_byte_data(ionopimax_i2c_client, reg);
-	} else {
-		res = i2c_smbus_read_word_data(ionopimax_i2c_client, reg);
-	}
+	res = i2c_smbus_read_word_data(ionopimax_i2c_client, reg);
+
+	mutex_unlock(&data->update_lock);
 
 	if (res < 0) {
 		return -EIO;
+	}
+	return res;
+}
+
+static int32_t ionopimax_i2c_write(uint8_t reg, uint16_t val) {
+	int32_t res;
+	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
+
+	if (!mutex_trylock(&data->update_lock)) {
+		printk(KERN_ALERT "stratopi: * | I2C busy\n");
+		return -EBUSY;
+	}
+
+	printk(KERN_INFO "ionopimax: - | I2C write reg=%u val=0x%04x\n", reg, val);
+
+	res = i2c_smbus_write_word_data(ionopimax_i2c_client, reg, val);
+
+	mutex_unlock(&data->update_lock);
+
+	return res;
+}
+
+static void getI2cRegisterAndSign(struct device* dev,
+		struct device_attribute* attr, int16_t *reg, bool *sign) {
+	if (dev == pIoDevice) {
+		if (attr == &devAttrIoAv0) {
+			*reg = 31;
+			*sign = true;
+		} else if (attr == &devAttrIoAv1) {
+			*reg = 32;
+			*sign = true;
+		} else if (attr == &devAttrIoAv2) {
+			*reg = 33;
+			*sign = true;
+		} else if (attr == &devAttrIoAv3) {
+			*reg = 34;
+			*sign = true;
+		} else if (attr == &devAttrIoAi0) {
+			*reg = 35;
+			*sign = true;
+		} else if (attr == &devAttrIoAi1) {
+			*reg = 36;
+			*sign = true;
+		} else if (attr == &devAttrIoAi2) {
+			*reg = 37;
+			*sign = true;
+		} else if (attr == &devAttrIoAi3) {
+			*reg = 38;
+			*sign = true;
+		}
+
+	} else if (dev == pWatchdogDevice) {
+		if (attr == &devAttrWatchdogTimeout) {
+			*reg = 17;
+			*sign = false;
+		} else if (attr == &devAttrWatchdogDownDelay) {
+			*reg = 18;
+			*sign = false;
+		} else if (attr == &devAttrWatchdogSdSwitch) {
+			*reg = 19;
+			*sign = false;
+		}
+
+	} else if (dev == pPowerDevice) {
+		if (attr == &devAttrPowerDownDelay) {
+			*reg = 22;
+			*sign = false;
+		} else if (attr == &devAttrPowerOffTime) {
+			*reg = 23;
+			*sign = false;
+		} else if (attr == &devAttrPowerUpDelay) {
+			*reg = 24;
+			*sign = false;
+		}
+
+	} else if (dev == pMcuDevice) {
+		if (attr == &devAttrMcuFwVersion) {
+			*reg = 0;
+			*sign = false;
+		}
+	}
+}
+
+static ssize_t I2C_word_show(struct device* dev, struct device_attribute* attr,
+		char *buf) {
+	int32_t res;
+	bool sign;
+	int16_t reg = -1;
+
+	getI2cRegisterAndSign(dev, attr, &reg, &sign);
+
+	if (reg < 0) {
+		return -EINVAL;
+	}
+
+	res = ionopimax_i2c_read((uint8_t) reg);
+
+	if (res < 0) {
+		return res;
 	}
 
 	if (sign) {
@@ -429,6 +392,84 @@ static ssize_t I2C_show(struct device* dev, struct device_attribute* attr,
 	} else {
 		return sprintf(buf, "%d\n", res);
 	}
+}
+
+static ssize_t I2C_word_store(struct device* dev, struct device_attribute* attr,
+		const char *buf, size_t count) {
+	long val;
+	int ret;
+	bool sign;
+	int16_t reg = -1;
+
+	getI2cRegisterAndSign(dev, attr, &reg, &sign);
+
+	if (reg < 0) {
+		return -EINVAL;
+	}
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+
+	if (ionopimax_i2c_write((uint8_t) reg, (uint16_t) val) < 0) {
+		return -EIO;
+	}
+
+	return count;
+}
+
+static ssize_t I2C_bit_show(struct device* dev, struct device_attribute* attr,
+		char *buf) {
+	// TODO
+	return 0;
+}
+
+static ssize_t I2C_bit_store(struct device* dev, struct device_attribute* attr,
+		const char *buf, size_t count) {
+	// TODO
+	return count;
+}
+
+static int32_t i2c_read_val;
+
+static ssize_t I2C_read_show(struct device* dev, struct device_attribute* attr,
+		char *buf) {
+	return sprintf(buf, "0x%04x\n", i2c_read_val);
+}
+
+static ssize_t I2C_read_store(struct device* dev, struct device_attribute* attr,
+		const char *buf, size_t count) {
+	int ret;
+	long reg;
+	ret = kstrtol(buf, 10, &reg);
+	if (ret < 0) {
+		return ret;
+	}
+
+	i2c_read_val = ionopimax_i2c_read((uint8_t) reg);
+
+	if (i2c_read_val < 0) {
+		return i2c_read_val;
+	}
+
+	return count;
+}
+
+static ssize_t I2C_write_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	long reg = 0;
+	long val = 0;
+	char *end = NULL;
+
+	reg = simple_strtol(buf, &end, 10);
+	val = simple_strtol(end + 1, NULL, 16);
+
+	if (ionopimax_i2c_write((uint8_t) reg, (uint16_t) val) < 0) {
+		return -EIO;
+	}
+
+	return count;
 }
 
 static void softUartRxCallback(unsigned char character) {
@@ -486,99 +527,6 @@ static ssize_t MCU_cmd_store(struct device* dev, struct device_attribute* attr,
 		ret = count;
 	}
 
-	mutex_unlock(&mcuMutex);
-	return ret;
-}
-
-static ssize_t MCU_show(struct device* dev, struct device_attribute* attr,
-		char *buf) {
-	long val;
-	ssize_t ret;
-	char cmd[] = "XXX??";
-	int cmdLen = 4;
-	int prefixLen = 3;
-	int respLen = getMcuCmd(dev, attr, cmd);
-	if (respLen < 0) {
-		return -EINVAL;
-	}
-	if (respLen == 5) {
-		cmdLen = 5;
-		prefixLen = 4;
-	}
-
-	if (!mutex_trylock(&mcuMutex)) {
-		printk(KERN_ALERT "ionopimax: * | MCU busy\n");
-		return -EBUSY;
-	}
-
-	if (!softUartSendAndWait(cmd, cmdLen, respLen, 300, true)) {
-		ret = -EIO;
-	} else if (kstrtol((const char *) (softUartRxBuff + prefixLen), 10, &val)
-			== 0) {
-		ret = sprintf(buf, "%ld\n", val);
-	} else {
-		ret = sprintf(buf, "%s\n", softUartRxBuff + prefixLen);
-	}
-
-	mutex_unlock(&mcuMutex);
-	return ret;
-}
-
-static ssize_t MCU_store(struct device* dev, struct device_attribute* attr,
-		const char *buf, size_t count) {
-	ssize_t ret = count;
-	size_t len = count;
-	int i;
-	int padd;
-	int prefixLen = 3;
-	char cmd[] = "XXX00000";
-	int cmdLen = getMcuCmd(dev, attr, cmd);
-	if (cmdLen < 0) {
-		return -EINVAL;
-	}
-	if (cmdLen == 5) {
-		prefixLen = 4;
-	}
-	while (len > 0
-			&& (buf[len - 1] == '\n' || buf[len - 1] == '\r'
-					|| buf[len - 1] == ' ')) {
-		len--;
-	}
-	if (len < 1) {
-		return -EINVAL;
-	}
-	padd = cmdLen - prefixLen - len;
-	if (padd < 0 || padd > 4) {
-		return -EINVAL;
-	}
-	for (i = 0; i < len; i++) {
-		cmd[prefixLen + padd + i] = toUpper(buf[i]);
-	}
-	cmd[prefixLen + padd + i] = '\0';
-
-	if (!mutex_trylock(&mcuMutex)) {
-		printk(KERN_ALERT "ionopimax: * | MCU busy\n");
-		return -EBUSY;
-	}
-
-	if (!softUartSendAndWait(cmd, cmdLen, cmdLen, 300, true)) {
-		ret = -EIO;
-	} else {
-		for (i = 0; i < padd; i++) {
-			if (softUartRxBuff[prefixLen + i] != '0') {
-				ret = -EIO;
-				break;
-			}
-		}
-		if (ret == count) {
-			for (i = 0; i < len; i++) {
-				if (softUartRxBuff[prefixLen + padd + i] != toUpper(buf[i])) {
-					ret = -EIO;
-					break;
-				}
-			}
-		}
-	}
 	mutex_unlock(&mcuMutex);
 	return ret;
 }
@@ -865,7 +813,7 @@ static struct device_attribute devAttrIoAv0 = { //
 				.name = "av0", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -874,7 +822,7 @@ static struct device_attribute devAttrIoAv1 = { //
 				.name = "av1", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -883,7 +831,7 @@ static struct device_attribute devAttrIoAv2 = { //
 				.name = "av2", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -892,7 +840,7 @@ static struct device_attribute devAttrIoAv3 = { //
 				.name = "av3", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -901,7 +849,7 @@ static struct device_attribute devAttrIoAi0 = { //
 				.name = "ai0", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -910,7 +858,7 @@ static struct device_attribute devAttrIoAi1 = { //
 				.name = "ai1", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -919,7 +867,7 @@ static struct device_attribute devAttrIoAi2 = { //
 				.name = "ai2", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -928,7 +876,7 @@ static struct device_attribute devAttrIoAi3 = { //
 				.name = "ai3", //
 						.mode = 0440, //
 				},//
-				.show = I2C_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -964,8 +912,8 @@ static struct device_attribute devAttrWatchdogEnableMode = { //
 				.name = "enable_mode", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrWatchdogTimeout = { //
@@ -973,8 +921,8 @@ static struct device_attribute devAttrWatchdogTimeout = { //
 				.name = "timeout", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrWatchdogDownDelay = { //
@@ -982,8 +930,8 @@ static struct device_attribute devAttrWatchdogDownDelay = { //
 				.name = "down_delay", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrWatchdogSdSwitch = { //
@@ -991,26 +939,8 @@ static struct device_attribute devAttrWatchdogSdSwitch = { //
 				.name = "sd_switch", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
-		};
-
-static struct device_attribute devAttrRs485Mode = { //
-		.attr = { //
-				.name = "mode", //
-						.mode = 0660, //
-				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
-		};
-
-static struct device_attribute devAttrRs485Params = { //
-		.attr = { //
-				.name = "params", //
-						.mode = 0660, //
-				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrPowerDownEnabled = { //
@@ -1027,8 +957,8 @@ static struct device_attribute devAttrPowerDownDelay = { //
 				.name = "down_delay", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrPowerDownEnableMode = { //
@@ -1036,8 +966,8 @@ static struct device_attribute devAttrPowerDownEnableMode = { //
 				.name = "down_enable_mode", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrPowerOffTime = { //
@@ -1045,8 +975,8 @@ static struct device_attribute devAttrPowerOffTime = { //
 				.name = "off_time", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrPowerUpDelay = { //
@@ -1054,8 +984,8 @@ static struct device_attribute devAttrPowerUpDelay = { //
 				.name = "up_delay", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrPowerUpMode = { //
@@ -1063,8 +993,8 @@ static struct device_attribute devAttrPowerUpMode = { //
 				.name = "up_mode", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrPowerSdSwitch = { //
@@ -1072,8 +1002,8 @@ static struct device_attribute devAttrPowerSdSwitch = { //
 				.name = "sd_switch", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrUpsBattery = { //
@@ -1090,8 +1020,8 @@ static struct device_attribute devAttrUpsPowerDelay = { //
 				.name = "power_delay", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_word_show, //
+				.store = I2C_word_store, //
 		};
 
 static struct device_attribute devAttrRelayStatus = { //
@@ -1153,8 +1083,8 @@ static struct device_attribute devAttrSdSdxEnabled = { //
 				.name = "sdx_enabled", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrSdSd1Enabled = { //
@@ -1162,8 +1092,8 @@ static struct device_attribute devAttrSdSd1Enabled = { //
 				.name = "sd1_enabled", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrSdSdxRouting = { //
@@ -1171,8 +1101,8 @@ static struct device_attribute devAttrSdSdxRouting = { //
 				.name = "sdx_routing", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrSdSdxDefault = { //
@@ -1180,8 +1110,8 @@ static struct device_attribute devAttrSdSdxDefault = { //
 				.name = "sdx_default", //
 						.mode = 0660, //
 				},//
-				.show = MCU_show, //
-				.store = MCU_store, //
+				.show = I2C_bit_show, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrUsb1Disabled = { //
@@ -1229,13 +1159,31 @@ static struct device_attribute devAttrMcuCmd = { //
 				.store = MCU_cmd_store, //
 		};
 
+static struct device_attribute devAttrMcuI2cRead = { //
+		.attr = { //
+				.name = "i2c_read", //
+						.mode = 0660, //
+				},//
+				.show = I2C_read_show, //
+				.store = I2C_read_store, //
+		};
+
+static struct device_attribute devAttrMcuI2cWrite = { //
+		.attr = { //
+				.name = "i2c_write", //
+						.mode = 0220, //
+				},//
+				.show = NULL, //
+				.store = I2C_write_store, //
+		};
+
 static struct device_attribute devAttrMcuConfig = { //
 		.attr = { //
 				.name = "config", //
 						.mode = 0220, //
 				},//
 				.show = NULL, //
-				.store = MCU_store, //
+				.store = I2C_bit_store, //
 		};
 
 static struct device_attribute devAttrMcuFwVersion = { //
@@ -1243,7 +1191,7 @@ static struct device_attribute devAttrMcuFwVersion = { //
 				.name = "fw_version", //
 						.mode = 0440, //
 				},//
-				.show = MCU_show, //
+				.show = I2C_word_show, //
 				.store = NULL, //
 		};
 
@@ -1265,10 +1213,6 @@ static struct device_attribute devAttrMcuFwInstallProgress = { //
 				.store = NULL, //
 		};
 
-struct ionopimax_i2c_data {
-	struct mutex update_lock;
-};
-
 static int ionopimax_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id) {
 	struct ionopimax_i2c_data *data;
@@ -1283,7 +1227,7 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 	mutex_init(&data->update_lock);
 
 	printk(KERN_INFO "ionopimax: - | ionopimax_i2c_probe device addr 0x%02hx\n", client->addr); // TODO remove
-	if (client->addr != I2C_LOCAL_ADDR) {
+	if (client->addr != I2C_ADDR_LOCAL) {
 		// TODO test communication and add external device and sysFs files
 		printk(KERN_INFO "ionopimax: - | ionopimax_i2c_probe external device 0x%02hx\n", client->addr);;
 	}
@@ -1296,7 +1240,7 @@ static int ionopimax_i2c_remove(struct i2c_client *client) {
 	mutex_destroy(&data->update_lock);
 
 	printk(KERN_INFO "ionopimax: - | ionopimax_i2c_remove device addr 0x%02hx\n", client->addr); // TODO remove
-	if (client->addr != I2C_LOCAL_ADDR) {
+	if (client->addr != I2C_ADDR_LOCAL) {
 		// TODO remove external device and sysFs files
 		printk(KERN_INFO "ionopimax: - | ionopimax_i2c_remove external device 0x%02hx\n", client->addr);;
 	}
@@ -1319,11 +1263,8 @@ static struct i2c_driver ionopimax_i2c_driver = { //
 				.id_table = ionopimax_i2c_id, //
 		};
 
-static struct i2c_board_info ionopimax_i2c_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("ionopimax", I2C_LOCAL_ADDR),
-	}
-};
+static struct i2c_board_info ionopimax_i2c_board_info[]
+__initdata = { { I2C_BOARD_INFO("ionopimax", I2C_ADDR_LOCAL), } };
 
 static void cleanup(void) {
 	if (ionopimax_i2c_client) {
@@ -1379,13 +1320,6 @@ static void cleanup(void) {
 		device_destroy(pDeviceClass, 0);
 	}
 
-	if (pRs485Device && !IS_ERR(pRs485Device)) {
-		device_remove_file(pRs485Device, &devAttrRs485Mode);
-		device_remove_file(pRs485Device, &devAttrRs485Params);
-
-		device_destroy(pDeviceClass, 0);
-	}
-
 	if (pSdDevice && !IS_ERR(pSdDevice)) {
 		device_remove_file(pSdDevice, &devAttrSdSdxEnabled);
 		device_remove_file(pSdDevice, &devAttrSdSd1Enabled);
@@ -1397,6 +1331,8 @@ static void cleanup(void) {
 
 	if (pMcuDevice && !IS_ERR(pMcuDevice)) {
 		device_remove_file(pMcuDevice, &devAttrMcuCmd);
+		device_remove_file(pMcuDevice, &devAttrMcuI2cRead);
+		device_remove_file(pMcuDevice, &devAttrMcuI2cWrite);
 		device_remove_file(pMcuDevice, &devAttrMcuConfig);
 		device_remove_file(pMcuDevice, &devAttrMcuFwVersion);
 		device_remove_file(pMcuDevice, &devAttrMcuFwInstall);
@@ -1449,7 +1385,8 @@ static int __init ionopimax_init(void) {
 
 	i2c_add_driver(&ionopimax_i2c_driver);
 
-	ionopimax_i2c_client = i2c_new_device(i2c_get_adapter(1), ionopimax_i2c_board_info);
+	ionopimax_i2c_client = i2c_new_device(i2c_get_adapter(1),
+			ionopimax_i2c_board_info);
 	if (!ionopimax_i2c_client) {
 		printk(KERN_ALERT "ionopimax: * | error creating ionopimax I2C device\n");
 		goto fail;
@@ -1477,12 +1414,11 @@ static int __init ionopimax_init(void) {
 	pIoDevice = device_create(pDeviceClass, NULL, 0, NULL, "io");
 	pWatchdogDevice = device_create(pDeviceClass, NULL, 0, NULL, "watchdog");
 	pPowerDevice = device_create(pDeviceClass, NULL, 0, NULL, "power");
-	pRs485Device = device_create(pDeviceClass, NULL, 0, NULL, "rs485");
 	pSdDevice = device_create(pDeviceClass, NULL, 0, NULL, "sd");
 	pMcuDevice = device_create(pDeviceClass, NULL, 0, NULL, "mcu");
 
-	if (IS_ERR(pBuzzerDevice) || IS_ERR(pIoDevice) || IS_ERR(pWatchdogDevice) || IS_ERR(pPowerDevice) ||
-			IS_ERR(pSdDevice) || IS_ERR(pRs485Device) || IS_ERR(pMcuDevice)) {
+	if (IS_ERR(pBuzzerDevice) || IS_ERR(pIoDevice) || IS_ERR(pWatchdogDevice)
+			|| IS_ERR(pPowerDevice) || IS_ERR(pSdDevice) || IS_ERR(pMcuDevice)) {
 		printk(KERN_ALERT "ionopimax: * | failed to create devices\n");
 		goto fail;
 	}
@@ -1507,9 +1443,6 @@ static int __init ionopimax_init(void) {
 	result |= device_create_file(pWatchdogDevice, &devAttrWatchdogTimeout);
 	result |= device_create_file(pWatchdogDevice, &devAttrWatchdogDownDelay);
 
-	result |= device_create_file(pRs485Device, &devAttrRs485Mode);
-	result |= device_create_file(pRs485Device, &devAttrRs485Params);
-
 	result |= device_create_file(pPowerDevice, &devAttrPowerDownEnabled);
 	result |= device_create_file(pPowerDevice, &devAttrPowerDownDelay);
 	result |= device_create_file(pPowerDevice, &devAttrPowerDownEnableMode);
@@ -1524,6 +1457,8 @@ static int __init ionopimax_init(void) {
 	result |= device_create_file(pSdDevice, &devAttrSdSdxDefault);
 
 	result |= device_create_file(pMcuDevice, &devAttrMcuCmd);
+	result |= device_create_file(pMcuDevice, &devAttrMcuI2cRead);
+	result |= device_create_file(pMcuDevice, &devAttrMcuI2cWrite);
 	result |= device_create_file(pMcuDevice, &devAttrMcuConfig);
 	result |= device_create_file(pMcuDevice, &devAttrMcuFwVersion);
 	result |= device_create_file(pMcuDevice, &devAttrMcuFwInstall);
