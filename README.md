@@ -15,6 +15,12 @@ Clone this repo:
 Install the Raspberry Pi kernel headers:
 
     sudo apt-get install raspberrypi-kernel-headers
+    
+Enable I2C:
+
+    sudo raspi-config
+    
+Select: Interfacing Options -> I2C -> Yes
 
 Make and install:
 
