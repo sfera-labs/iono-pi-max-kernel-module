@@ -1376,6 +1376,7 @@ static bool softUartInit(void) {
 }
 
 static int __init ionopimax_init(void) {
+	struct i2c_adapter* i2cAdapter1;
 	int result = 0;
 	softUartInitialized = false;
 
@@ -1385,8 +1386,13 @@ static int __init ionopimax_init(void) {
 
 	i2c_add_driver(&ionopimax_i2c_driver);
 
-	ionopimax_i2c_client = i2c_new_device(i2c_get_adapter(1),
-			ionopimax_i2c_board_info);
+	i2cAdapter1 = i2c_get_adapter(1);
+	if (!i2cAdapter1) {
+		printk(KERN_ALERT "ionopimax: * | I2C bus 1 not found, have you enabled it?\n");
+		goto fail;
+	}
+
+	ionopimax_i2c_client = i2c_new_device(i2cAdapter1, ionopimax_i2c_board_info);
 	if (!ionopimax_i2c_client) {
 		printk(KERN_ALERT "ionopimax: * | error creating ionopimax I2C device\n");
 		goto fail;
