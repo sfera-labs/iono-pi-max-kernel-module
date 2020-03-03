@@ -1,6 +1,6 @@
 obj-m += ionopimax.o
 
-ionopimax-objs := module.o soft_uart/raspberry_soft_uart.o soft_uart/queue.o
+ionopimax-objs := module.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules
