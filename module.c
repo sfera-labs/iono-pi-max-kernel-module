@@ -83,6 +83,7 @@ static const char VALS_WATCHDOG_ENABLE_MODE[] = { 2, 'D', 'A' };
 static const char VALS_POWER_DOWN_ENABLE_MODE[] = { 2, 'I', 'A' };
 static const char VALS_POWER_UP_MODE[] = { 2, 'M', 'A' };
 static const char VALS_SD_SDX_ROUTING[] = { 2, 'A', 'B' };
+static const char VALS_ANALOG_OUTS_MODE[] = { 2, 'I', 'V' };
 
 static struct DeviceAttrBean devAttrBeansBuzzer[] = {
 	{
@@ -1038,6 +1039,66 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 	}
 };
 
+static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di1",
+				.mode = 0440,
+			},
+			.show = devAttrGpio_show,
+			.store = NULL,
+		},
+		.gpioMode = GPIO_MODE_IN,
+		.gpio = 16,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di2",
+				.mode = 0440,
+			},
+			.show = devAttrGpio_show,
+			.store = NULL,
+		},
+		.gpioMode = GPIO_MODE_IN,
+		.gpio = 19,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di3",
+				.mode = 0440,
+			},
+			.show = devAttrGpio_show,
+			.store = NULL,
+		},
+		.gpioMode = GPIO_MODE_IN,
+		.gpio = 20,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di4",
+				.mode = 0440,
+			},
+			.show = devAttrGpio_show,
+			.store = NULL,
+		},
+		.gpioMode = GPIO_MODE_IN,
+		.gpio = 21,
+	},
+
+	{
+		.devAttr = {
+			.attr = { .name = NULL }
+		}
+	}
+};
+
 static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 	{
 		.devAttr = {
@@ -1975,6 +2036,146 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 	}
 };
 
+static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
+	{
+		.devAttr = {
+			.attr = {
+				.name = "ao1_enabled",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 58,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 15,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "ao1_mode",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 58,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 14,
+			.sign = false,
+			.vals = VALS_ANALOG_OUTS_MODE,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "ao1",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 59,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "ao2_enabled",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 61,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 15,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "ao2_mode",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 61,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 14,
+			.sign = false,
+			.vals = VALS_ANALOG_OUTS_MODE,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "ao2",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 62,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = { .name = NULL }
+		}
+	}
+};
+
 static struct DeviceAttrBean devAttrBeansPowerOut[] = {
 	{
 		.devAttr = {
@@ -2171,6 +2372,32 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 	{
 		.devAttr = {
 			.attr = {
+				.name = "sw_en",
+				.mode = 0660,
+			},
+			.show = devAttrGpio_show,
+			.store = devAttrGpio_store,
+		},
+		.gpioMode = GPIO_MODE_OUT,
+		.gpio = 41,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "sw_reset",
+				.mode = 0660,
+			},
+			.show = devAttrGpio_show,
+			.store = devAttrGpio_store,
+		},
+		.gpioMode = GPIO_MODE_OUT,
+		.gpio = 45,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
 				.name = "i2c_read",
 				.mode = 0660,
 			},
@@ -2219,6 +2446,11 @@ static struct DeviceBean devices[] = {
 	},
 
 	{
+		.name = "analog_out",
+		.devAttrBeans = devAttrBeansAnalogOut,
+	},
+
+	{
 		.name = "analog_temp",
 		.devAttrBeans = devAttrBeansAnalogTemp,
 	},
@@ -2226,6 +2458,11 @@ static struct DeviceBean devices[] = {
 	{
 		.name = "digital_out",
 		.devAttrBeans = devAttrBeansDigitalOut,
+	},
+
+	{
+		.name = "digital_in",
+		.devAttrBeans = devAttrBeansDigitalIn,
 	},
 
 	{
