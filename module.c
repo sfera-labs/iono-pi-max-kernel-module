@@ -69,6 +69,12 @@ static ssize_t devAttrI2c_store(struct device* dev,
 static ssize_t devAttrI2c_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
+static ssize_t devAttrMcuFwVersion_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrMcuConfig_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
 static ssize_t mcuI2cRead_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
@@ -932,105 +938,107 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 };
 
 static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt1_direction",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show, // TODO dtDirection_show
-			.store = devAttrGpio_store, // TODO dtDirection_store
-				},
-		.gpio = 29,
-	},
+	/*
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt1_direction",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show, // TODO dtDirection_show
+	 .store = devAttrGpio_store, // TODO dtDirection_store
+	 },
+	 .gpio = 29,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt2_direction",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show, // TODO dtDirection_show
-			.store = devAttrGpio_store, // TODO dtDirection_store
-				},
-		.gpio = 34,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt2_direction",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show, // TODO dtDirection_show
+	 .store = devAttrGpio_store, // TODO dtDirection_store
+	 },
+	 .gpio = 34,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt3_direction",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show, // TODO dtDirection_show
-			.store = devAttrGpio_store, // TODO dtDirection_store
-				},
-		.gpio = 35,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt3_direction",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show, // TODO dtDirection_show
+	 .store = devAttrGpio_store, // TODO dtDirection_store
+	 },
+	 .gpio = 35,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt4_direction",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show, // TODO dtDirection_show
-			.store = devAttrGpio_store, // TODO dtDirection_store
-				},
-		.gpio = 36,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt4_direction",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show, // TODO dtDirection_show
+	 .store = devAttrGpio_store, // TODO dtDirection_store
+	 },
+	 .gpio = 36,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt1",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show,
-			.store = devAttrGpio_store,
-		},
-		.gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-		.gpio = 29,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt1",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show,
+	 .store = devAttrGpio_store,
+	 },
+	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
+	 .gpio = 29,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt2",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show,
-			.store = devAttrGpio_store,
-		},
-		.gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-		.gpio = 34,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt2",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show,
+	 .store = devAttrGpio_store,
+	 },
+	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
+	 .gpio = 34,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt3",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show,
-			.store = devAttrGpio_store,
-		},
-		.gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-		.gpio = 35,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt3",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show,
+	 .store = devAttrGpio_store,
+	 },
+	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
+	 .gpio = 35,
+	 },
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "dt4",
-				.mode = 0660,
-			},
-			.show = devAttrGpio_show,
-			.store = devAttrGpio_store,
-		},
-		.gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-		.gpio = 36,
-	},
+	 {
+	 .devAttr = {
+	 .attr = {
+	 .name = "dt4",
+	 .mode = 0660,
+	 },
+	 .show = devAttrGpio_show,
+	 .store = devAttrGpio_store,
+	 },
+	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
+	 .gpio = 36,
+	 },
+	 */
 
 	{
 		.devAttr = {
@@ -1862,6 +1870,160 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 	},
 
+	{
+		.devAttr = {
+			.attr = {
+				.name = "battery_cells",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 96,
+			.maskedReg = false,
+			.mask = 0b1111,
+			.shift = 6,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "battery_type",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 96,
+			.maskedReg = false,
+			.mask = 0b1111,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "battery_charge",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecsShow = {
+			.reg = 97,
+			.maskedReg = false,
+			.mask = 0xff,
+			.shift = 8,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "battery_status",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecsShow = {
+			.reg = 97,
+			.maskedReg = false,
+			.mask = 0b1111,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "battery_capacity",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 98,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "battery_current_max",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 99,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "power_delay",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 100,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
 	// TODO all the rest
 
 	{
@@ -2372,6 +2534,28 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 	{
 		.devAttr = {
 			.attr = {
+				.name = "fw_version",
+				.mode = 0440,
+			},
+			.show = devAttrMcuFwVersion_show,
+			.store = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "config",
+				.mode = 0220,
+			},
+			.show = NULL,
+			.store = devAttrMcuConfig_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
 				.name = "sw_en",
 				.mode = 0660,
 			},
@@ -2689,6 +2873,9 @@ static int32_t ionopimax_i2c_write(uint8_t reg, uint16_t val) {
 
 	ionopimax_i2c_unlock();
 
+	if (res < 0) {
+		return -EIO;
+	}
 	return res;
 }
 
@@ -2814,6 +3001,58 @@ static ssize_t devAttrI2c_store(struct device* dev,
 	}
 
 	return count;
+}
+
+static ssize_t devAttrMcuFwVersion_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	int32_t val;
+	val = ionopimax_i2c_read(0);
+
+	if (val < 0) {
+		return val;
+	}
+
+	return sprintf(buf, "%d.%d\n", (val >> 8) & 0xf, val & 0xf);
+}
+
+static ssize_t devAttrMcuConfig_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int32_t res;
+	uint16_t val;
+	uint16_t i;
+	char cmd;
+	cmd = toUpper(buf[0]);
+	val = 0x2a00;
+	if (cmd == 'R') {
+		val |= 0x02;
+	} else if (cmd == 'S') {
+		val |= 0x03;
+	} else {
+		return -EINVAL;
+	}
+
+	res = ionopimax_i2c_write(2, val);
+	if (res < 0) {
+		return res;
+	}
+
+	for (i = 0; i < 10; i++) {
+		msleep(50);
+		res = ionopimax_i2c_read(3);
+		if (res >= 0) {
+			if (((res >> 8) & 1) == 0) {
+				if (((res >> 6) & 1) == 1) {
+					return count;
+				} else {
+					return -EFAULT;
+				}
+			} else {
+				res = -EBUSY;
+			}
+		}
+	}
+
+	return res;
 }
 
 static int32_t mcuI2cReadVal;
