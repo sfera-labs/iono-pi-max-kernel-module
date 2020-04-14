@@ -18,8 +18,12 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/interrupt.h>
+#include <linux/time.h>
 
 #define I2C_ADDR_LOCAL 0x35
+
+#define WIEGAND_MAX_BITS 64
 
 #define GPIO_MODE_IN 1
 #define GPIO_MODE_OUT 2
@@ -52,6 +56,27 @@ struct DeviceBean {
 	struct DeviceAttrBean *devAttrBeans;
 };
 
+struct WiegandLine {
+	int gpio;
+	unsigned int irq;
+	bool irqRequested;
+	bool wasLow;
+};
+
+struct WiegandBean {
+	struct WiegandLine d0;
+	struct WiegandLine d1;
+	struct WiegandLine *activeLine;
+	unsigned long pulseIntervalMin_usec;
+	unsigned long pulseIntervalMax_usec;
+	unsigned long pulseWidthMin_usec;
+	unsigned long pulseWidthMax_usec;
+	bool enabled;
+	uint64_t data;
+	int bitCount;
+	struct timespec lastBitTs;
+};
+
 static struct class *pDeviceClass;
 
 static ssize_t devAttrGpio_show(struct device* dev,
@@ -75,6 +100,39 @@ static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 static ssize_t devAttrMcuConfig_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
+static ssize_t devAttrWiegandEnabled_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandEnabled_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrWiegandData_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandPulseIntervalMin_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrWiegandPulseIntervalMax_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandPulseIntervalMax_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrWiegandPulseWidthMin_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandPulseWidthMin_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrWiegandPulseWidthMax_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
 static ssize_t mcuI2cRead_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
@@ -90,6 +148,38 @@ static const char VALS_POWER_DOWN_ENABLE_MODE[] = { 2, 'I', 'A' };
 static const char VALS_POWER_UP_MODE[] = { 2, 'M', 'A' };
 static const char VALS_SD_SDX_ROUTING[] = { 2, 'A', 'B' };
 static const char VALS_ANALOG_OUTS_MODE[] = { 2, 'I', 'V' };
+
+static struct WiegandBean w1 = {
+	.d0 = {
+		.gpio = 29,
+		.irqRequested = false,
+	},
+	.d1 = {
+		.gpio = 34,
+		.irqRequested = false,
+	},
+	.enabled = false,
+	.pulseWidthMin_usec = 10,
+	.pulseWidthMax_usec = 150,
+	.pulseIntervalMin_usec = 1200,
+	.pulseIntervalMax_usec = 2700,
+};
+
+static struct WiegandBean w2 = {
+	.d0 = {
+		.gpio = 35,
+		.irqRequested = false,
+	},
+	.d1 = {
+		.gpio = 36,
+		.irqRequested = false,
+	},
+	.enabled = false,
+	.pulseWidthMin_usec = 10,
+	.pulseWidthMax_usec = 150,
+	.pulseIntervalMin_usec = 1200,
+	.pulseIntervalMax_usec = 2700,
+};
 
 static struct DeviceAttrBean devAttrBeansBuzzer[] = {
 	{
@@ -1873,6 +1963,28 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 	{
 		.devAttr = {
 			.attr = {
+				.name = "battery",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecsShow = {
+			.reg = 97,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 7,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
 				.name = "battery_cells",
 				.mode = 0660,
 			},
@@ -2530,6 +2642,146 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 	}
 };
 
+static struct DeviceAttrBean devAttrBeansWiegand[] = {
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w1_enabled",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandEnabled_show,
+			.store = devAttrWiegandEnabled_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w1_data",
+				.mode = 0440,
+			},
+			.show = devAttrWiegandData_show,
+			.store = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w1_pulse_itvl_min",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseIntervalMin_show,
+			.store = devAttrWiegandPulseIntervalMin_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w1_pulse_itvl_max",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseIntervalMax_show,
+			.store = devAttrWiegandPulseIntervalMax_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w1_pulse_width_min",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseWidthMin_show,
+			.store = devAttrWiegandPulseWidthMin_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w1_pulse_width_max",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseWidthMax_show,
+			.store = devAttrWiegandPulseWidthMax_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_enabled",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandEnabled_show,
+			.store = devAttrWiegandEnabled_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_data",
+				.mode = 0440,
+			},
+			.show = devAttrWiegandData_show,
+			.store = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_pulse_itvl_min",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseIntervalMin_show,
+			.store = devAttrWiegandPulseIntervalMin_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_pulse_itvl_max",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseIntervalMax_show,
+			.store = devAttrWiegandPulseIntervalMax_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_pulse_width_min",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseWidthMin_show,
+			.store = devAttrWiegandPulseWidthMin_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_pulse_width_max",
+				.mode = 0660,
+			},
+			.show = devAttrWiegandPulseWidthMax_show,
+			.store = devAttrWiegandPulseWidthMax_store,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = { .name = NULL }
+		}
+	}
+};
+
 static struct DeviceAttrBean devAttrBeansMcu[] = {
 	{
 		.devAttr = {
@@ -2697,6 +2949,11 @@ static struct DeviceBean devices[] = {
 	{
 		.name = "sys_power_switch",
 		.devAttrBeans = devAttrBeansSysPowerSwitch,
+	},
+
+	{
+		.name = "wiegand",
+		.devAttrBeans = devAttrBeansWiegand,
 	},
 
 	{
@@ -3003,6 +3260,391 @@ static ssize_t devAttrI2c_store(struct device* dev,
 	return count;
 }
 
+static struct WiegandBean* getWiegandBean(struct device* dev,
+		struct device_attribute* attr) {
+	struct DeviceAttrBean* dab;
+	dab = devAttrGetBean(dev, attr);
+	if (dab->devAttr.attr.name[1] == '1') {
+		return &w1;
+	} else {
+		return &w2;
+	}
+}
+
+static ssize_t devAttrWiegandEnabled_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+	return sprintf(buf, w->enabled ? "1\n" : "0\n");
+}
+
+static void wiegandReset(struct WiegandBean* w) {
+	w->enabled = true;
+	w->data = 0;
+	w->bitCount = 0;
+	w->activeLine = NULL;
+	w->d0.wasLow = false;
+	w->d1.wasLow = false;
+}
+
+static unsigned long to_usec(struct timespec *t) {
+	return (t->tv_sec * 1000000) + (t->tv_nsec / 1000);
+}
+
+static unsigned long diff_usec(struct timespec *t1, struct timespec *t2) {
+	struct timespec diff;
+	diff = timespec_sub(*t2, *t1);
+	return to_usec(&diff);
+}
+
+static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
+		struct pt_regs *regs) {
+	bool isLow;
+	struct timespec now;
+	unsigned long diff;
+	struct WiegandBean* w;
+	struct WiegandLine* l = NULL;
+
+	if (w1.enabled) {
+		if (irq == w1.d0.irq) {
+			w = &w1;
+			l = &w1.d0;
+		} else if (irq == w1.d1.irq) {
+			w = &w1;
+			l = &w1.d1;
+		}
+	}
+
+	if (w2.enabled) {
+		if (irq == w2.d0.irq) {
+			w = &w2;
+			l = &w2.d0;
+		} else if (irq == w2.d1.irq) {
+			w = &w2;
+			l = &w2.d1;
+		}
+	}
+
+	if (l == NULL) {
+		return (irq_handler_t) IRQ_HANDLED;
+	}
+
+	isLow = gpio_get_value(l->gpio) == 0;
+
+	getrawmonotonic(&now);
+
+	if (l->wasLow == isLow) {
+		// got the interrupt but didn't change state. Maybe a fast pulse
+		printk(KERN_ALERT "ionopimax: * | repeated interrupt on GPIO %d\n",
+				l->gpio);
+		return (irq_handler_t) IRQ_HANDLED;
+	}
+
+	l->wasLow = isLow;
+
+	if (isLow) {
+		if (w->bitCount != 0) {
+			diff = diff_usec((struct timespec *) &(w->lastBitTs), &now);
+
+			if (diff < w->pulseIntervalMin_usec) {
+				// pulse too early
+				// TODO remove
+				printk(KERN_ALERT "ionopimax: * | pulse too early\n");
+				goto noise;
+			}
+
+			if (diff > w->pulseIntervalMax_usec) {
+				w->data = 0;
+				w->bitCount = 0;
+			}
+		}
+
+		if (w->activeLine != NULL) {
+			// there's movement on both lines
+			// TODO remove
+			printk(
+			KERN_ALERT "ionopimax: * | there's movement on both lines\n");
+			goto noise;
+		}
+
+		w->activeLine = l;
+
+		w->lastBitTs.tv_sec = now.tv_sec;
+		w->lastBitTs.tv_nsec = now.tv_nsec;
+
+	} else {
+		if (w->activeLine != l) {
+			// there's movement on both lines or previous noise
+			// TODO remove
+			printk(
+					KERN_ALERT "ionopimax: * | there's movement on both lines or previous noise\n");
+			goto noise;
+		}
+
+		w->activeLine = NULL;
+
+		if (w->bitCount >= WIEGAND_MAX_BITS) {
+			return (irq_handler_t) IRQ_HANDLED;
+		}
+
+		diff = diff_usec((struct timespec *) &(w->lastBitTs), &now);
+		if (diff < w->pulseWidthMin_usec || diff > w->pulseWidthMax_usec) {
+			// pulse too short or too long
+			// TODO remove
+			printk(KERN_ALERT "ionopimax: * | pulse too short or too long\n");
+			goto noise;
+		}
+
+		w->data <<= 1;
+		if (l == &w->d1) {
+			w->data |= 1;
+		}
+		w->bitCount++;
+	}
+
+	// TODO remove
+//	printk(KERN_ALERT "ionopimax: * | wiegandDataIrqHandler %d %lld %lu\n",
+//			w->bitCount, w->data, diff);
+
+	return (irq_handler_t) IRQ_HANDLED;
+
+	noise:
+	wiegandReset(w);
+	return (irq_handler_t) IRQ_HANDLED;
+}
+
+static void wiegandDisable(struct WiegandBean* w) {
+	w->enabled = false;
+
+	gpio_unexport(w->d0.gpio);
+	gpio_unexport(w->d1.gpio);
+
+	gpio_free(w->d0.gpio);
+	gpio_free(w->d1.gpio);
+
+	if (w->d0.irqRequested) {
+		free_irq(w->d0.irq, NULL);
+		w->d0.irqRequested = false;
+	}
+
+	if (w->d1.irqRequested) {
+		free_irq(w->d1.irq, NULL);
+		w->d1.irqRequested = false;
+	}
+}
+
+static ssize_t devAttrWiegandEnabled_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	struct WiegandBean* w;
+	bool enable;
+	bool isW1;
+	int result = 0;
+	char reqName[] = "ionopimax_wN_dN";
+
+	w = getWiegandBean(dev, attr);
+
+	if (buf[0] == '0') {
+		enable = false;
+	} else if (buf[0] == '1') {
+		enable = true;
+	} else {
+		return -EINVAL;
+	}
+
+	if (enable) {
+		isW1 = w == &w1;
+		if (isW1) {
+			reqName[11] = '1';
+		} else {
+			reqName[11] = '2';
+		}
+
+		reqName[14] = '0';
+		gpio_request(w->d0.gpio, reqName);
+		reqName[14] = '1';
+		gpio_request(w->d1.gpio, reqName);
+
+		result = gpio_direction_input(w->d0.gpio);
+		if (!result) {
+			result = gpio_direction_input(w->d1.gpio);
+		}
+
+		if (result) {
+			printk(
+			KERN_ALERT "ionopimax: * | error setting up wiegand GPIOs\n");
+			enable = false;
+		} else {
+			gpio_set_debounce(w->d0.gpio, 0);
+			gpio_set_debounce(w->d1.gpio, 0);
+			gpio_export(w->d0.gpio, false);
+			gpio_export(w->d1.gpio, false);
+
+			w->d0.irq = gpio_to_irq(w->d0.gpio);
+			w->d1.irq = gpio_to_irq(w->d1.gpio);
+
+			reqName[14] = '0';
+			result = request_irq(w->d0.irq,
+					(irq_handler_t) wiegandDataIrqHandler,
+					IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+					reqName, NULL);
+
+			if (result) {
+				printk(
+						KERN_ALERT "ionopimax: * | error registering wiegand D0 irq handler\n");
+				enable = false;
+			} else {
+				w->d0.irqRequested = true;
+
+				reqName[14] = '1';
+				result = request_irq(w->d1.irq,
+						(irq_handler_t) wiegandDataIrqHandler,
+						IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+						reqName, NULL);
+
+				if (result) {
+					printk(
+							KERN_ALERT "ionopimax: * | error registering wiegand D1 irq handler\n");
+					enable = false;
+				} else {
+					w->d1.irqRequested = true;
+				}
+			}
+		}
+	}
+
+	if (enable) {
+		wiegandReset(w);
+	} else {
+		wiegandDisable(w);
+	}
+
+	if (result) {
+		return result;
+	}
+	return count;
+}
+
+static ssize_t devAttrWiegandData_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct timespec now;
+	unsigned long diff;
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	if (!w->enabled) {
+		return -ENODEV;
+	}
+
+	getrawmonotonic(&now);
+	diff = diff_usec((struct timespec *) &(w->lastBitTs), &now);
+	if (diff <= w->pulseIntervalMax_usec) {
+		return -EBUSY;
+	}
+
+	return sprintf(buf, "%lu %d %llu\n", to_usec(&w->lastBitTs), w->bitCount,
+			w->data);
+}
+
+static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	return sprintf(buf, "%lu\n", w->pulseIntervalMin_usec);
+}
+
+static ssize_t devAttrWiegandPulseIntervalMin_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int ret;
+	unsigned long val;
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+
+	w->pulseIntervalMin_usec = val;
+
+	return count;
+}
+
+static ssize_t devAttrWiegandPulseIntervalMax_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	return sprintf(buf, "%lu\n", w->pulseIntervalMax_usec);
+}
+
+static ssize_t devAttrWiegandPulseIntervalMax_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int ret;
+	unsigned long val;
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+
+	w->pulseIntervalMax_usec = val;
+
+	return count;
+}
+
+static ssize_t devAttrWiegandPulseWidthMin_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	return sprintf(buf, "%lu\n", w->pulseWidthMin_usec);
+}
+
+static ssize_t devAttrWiegandPulseWidthMin_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int ret;
+	unsigned long val;
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+
+	w->pulseWidthMin_usec = val;
+
+	return count;
+}
+
+static ssize_t devAttrWiegandPulseWidthMax_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	return sprintf(buf, "%lu\n", w->pulseWidthMax_usec);
+}
+
+static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int ret;
+	unsigned long val;
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+
+	w->pulseWidthMax_usec = val;
+
+	return count;
+}
+
 static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t val;
@@ -3109,7 +3751,7 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->update_lock);
 
-// printk(KERN_INFO "ionopimax: - | ionopimax_i2c_probe device addr 0x%02hx\n", client->addr);
+	// printk(KERN_INFO "ionopimax: - | ionopimax_i2c_probe device addr 0x%02hx\n", client->addr);
 	if (client->addr != I2C_ADDR_LOCAL) {
 		// TODO test communication and add external device and sysFs files
 		printk(
@@ -3124,7 +3766,7 @@ static int ionopimax_i2c_remove(struct i2c_client *client) {
 	struct ionopimax_i2c_data *data = i2c_get_clientdata(client);
 	mutex_destroy(&data->update_lock);
 
-// printk(KERN_INFO "ionopimax: - | ionopimax_i2c_remove device addr 0x%02hx\n", client->addr);
+	// printk(KERN_INFO "ionopimax: - | ionopimax_i2c_remove device addr 0x%02hx\n", client->addr);
 	if (client->addr != I2C_ADDR_LOCAL) {
 		// TODO remove external device and sysFs files
 		printk(
@@ -3182,6 +3824,9 @@ static void cleanup(void) {
 	if (!IS_ERR(pDeviceClass)) {
 		class_destroy(pDeviceClass);
 	}
+
+	wiegandDisable(&w1);
+	wiegandDisable(&w2);
 }
 
 static int __init ionopimax_init(void) {
@@ -3248,8 +3893,7 @@ static int __init ionopimax_init(void) {
 						devices[di].devAttrBeans[ai].devAttr.attr.name);
 
 				// TODO remove
-				printk(KERN_ALERT "ionopimax: * | requesting GPIO %s\n",
-						gpioReqName);
+				// printk(KERN_ALERT "ionopimax: * | requesting GPIO %s\n", gpioReqName);
 
 				gpio_request(devices[di].devAttrBeans[ai].gpio, gpioReqName);
 				if (devices[di].devAttrBeans[ai].gpioMode == GPIO_MODE_OUT) {
@@ -3259,13 +3903,13 @@ static int __init ionopimax_init(void) {
 					result = gpio_direction_input(
 							devices[di].devAttrBeans[ai].gpio);
 				}
-				gpio_export(devices[di].devAttrBeans[ai].gpio, false);
 				if (result) {
 					printk(
 					KERN_ALERT "ionopimax: * | error setting up GPIO %d\n",
 							devices[di].devAttrBeans[ai].gpio);
 					goto fail;
 				}
+				gpio_export(devices[di].devAttrBeans[ai].gpio, false);
 			}
 			ai++;
 		}
