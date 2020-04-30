@@ -2637,6 +2637,28 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 
 	{
 		.devAttr = {
+			.attr = {
+				.name = "fan_duty_tmp",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 92,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
 			.attr = { .name = NULL }
 		}
 	}
