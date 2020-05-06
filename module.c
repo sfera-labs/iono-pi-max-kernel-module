@@ -2635,6 +2635,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 	},
 
+	// TODO remove duty cycle control for fan. Only on/off
 	{
 		.devAttr = {
 			.attr = {
@@ -3104,7 +3105,7 @@ static ssize_t devAttrGpioBlink_store(struct device* dev,
 static bool ionopimax_i2c_lock(void) {
 	ionopimax_i2c_client_data = i2c_get_clientdata(ionopimax_i2c_client);
 	if (!mutex_trylock(&ionopimax_i2c_client_data->update_lock)) {
-		printk(KERN_ALERT "stratopi: * | I2C busy\n");
+		printk(KERN_ALERT "ionopimax: * | I2C busy\n");
 		return false;
 	}
 	return true;
