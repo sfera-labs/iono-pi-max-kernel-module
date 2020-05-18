@@ -3088,7 +3088,6 @@ static ssize_t devAttrGpioBlink_store(struct device* dev,
 	if (rep < 1) {
 		rep = 1;
 	}
-	printk(KERN_INFO "ionopimax: - | gpio blink %ld %ld %ld\n", on, off, rep);
 	if (on > 0) {
 		for (i = 0; i < rep; i++) {
 			gpio_set_value(gpio, 1);
@@ -3116,12 +3115,12 @@ static void ionopimax_i2c_unlock(void) {
 }
 
 static int32_t ionopimax_i2c_read_no_lock(uint8_t reg) {
-	printk(KERN_INFO "ionopimax: - | I2C read reg=%u\n", reg);
+	// printk(KERN_INFO "ionopimax: - | I2C read reg=%u\n", reg);
 	return i2c_smbus_read_word_data(ionopimax_i2c_client, reg);
 }
 
 static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint16_t val) {
-	printk(KERN_INFO "ionopimax: - | I2C write reg=%u val=0x%04x\n", reg, val);
+	// printk(KERN_INFO "ionopimax: - | I2C write reg=%u val=0x%04x\n", reg, val);
 	return i2c_smbus_write_word_data(ionopimax_i2c_client, reg, val);
 }
 
@@ -3135,6 +3134,8 @@ static int32_t ionopimax_i2c_read(uint8_t reg) {
 	res = ionopimax_i2c_read_no_lock(reg);
 
 	ionopimax_i2c_unlock();
+
+	// TODO implement retry logic if fails
 
 	if (res < 0) {
 		return -EIO;
@@ -3152,6 +3153,8 @@ static int32_t ionopimax_i2c_write(uint8_t reg, uint16_t val) {
 	res = ionopimax_i2c_write_no_lock(reg, val);
 
 	ionopimax_i2c_unlock();
+
+	// TODO implement retry logic and check written value
 
 	if (res < 0) {
 		return -EIO;
