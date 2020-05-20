@@ -1612,7 +1612,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
-			.sign = false,
+			.sign = true,
 			.vals = NULL,
 		},
 		.regSpecsStore = {
@@ -1634,7 +1634,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
-			.sign = false,
+			.sign = true,
 			.vals = NULL,
 		},
 		.regSpecsStore = {
