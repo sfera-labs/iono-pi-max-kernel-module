@@ -1022,6 +1022,28 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 
 	{
 		.devAttr = {
+			.attr = {
+				.name = "ptp",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecsShow = {
+			.reg = 32,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 2,
+			.sign = false,
+			.vals = NULL,
+		},
+		.regSpecsStore = {
+			.reg = -1,
+		},
+	},
+
+	{
+		.devAttr = {
 			.attr = { .name = NULL }
 		}
 	}
