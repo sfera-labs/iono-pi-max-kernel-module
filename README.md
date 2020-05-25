@@ -10,7 +10,7 @@ If you don't have git installed:
 
 Clone this repo:
 
-    git clone https://github.com/sfera-labs-dev/iono-pi-max-kernel-module.git
+    git clone --depth 1 https://github.com/sfera-labs-dev/iono-pi-max-kernel-module.git
     
 Install the Raspberry Pi kernel headers:
 
