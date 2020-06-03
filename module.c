@@ -35,8 +35,9 @@ MODULE_VERSION("0.5");
 
 struct DeviceAttrRegSpecs {
 	int16_t reg;
+	uint8_t len;
 	bool maskedReg;
-	int16_t mask;
+	uint32_t mask;
 	uint8_t shift;
 	bool sign;
 	const char *vals;
@@ -248,6 +249,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 64,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -270,6 +272,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 65,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -292,6 +295,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 66,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -314,6 +318,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 67,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -336,6 +341,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 68,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -358,6 +364,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 69,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -380,6 +387,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 70,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -402,6 +410,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 71,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -424,6 +433,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 72,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -446,6 +456,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 73,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -468,6 +479,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 74,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -490,6 +502,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 75,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -512,6 +525,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 76,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -534,6 +548,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 77,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -556,6 +571,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 78,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -578,6 +594,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 79,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -600,6 +617,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 80,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -622,6 +640,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 81,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -644,6 +663,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 82,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -666,6 +686,7 @@ static struct DeviceAttrBean devAttrBeansLed[] = {
 		},
 		.regSpecsShow = {
 			.reg = 83,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -696,6 +717,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 32,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 0,
@@ -718,6 +740,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 32,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 1,
@@ -759,8 +782,9 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 33,
+			.len = 3,
 			.maskedReg = false,
-			.mask = 0xffff,
+			.mask = 0xffffff,
 			.shift = 0,
 			.sign = true,
 			.vals = NULL,
@@ -781,6 +805,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 34,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -803,6 +828,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 35,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -825,6 +851,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 36,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -847,6 +874,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 37,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -869,6 +897,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 38,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -891,6 +920,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 39,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -913,6 +943,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 		},
 		.regSpecsShow = {
 			.reg = 40,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -943,6 +974,7 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 		},
 		.regSpecsShow = {
 			.reg = 32,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 12,
@@ -965,6 +997,7 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 		},
 		.regSpecsShow = {
 			.reg = 32,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 14,
@@ -987,6 +1020,7 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 		},
 		.regSpecsShow = {
 			.reg = 41,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1009,6 +1043,7 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 		},
 		.regSpecsShow = {
 			.reg = 42,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1031,6 +1066,7 @@ static struct DeviceAttrBean devAttrBeansAnalogTemp[] = {
 		},
 		.regSpecsShow = {
 			.reg = 32,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 2,
@@ -1231,6 +1267,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 87,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 0,
@@ -1239,6 +1276,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 86,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 0,
@@ -1258,6 +1296,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 87,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 2,
@@ -1266,6 +1305,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 86,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 1,
@@ -1285,6 +1325,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 87,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 4,
@@ -1293,6 +1334,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 86,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 2,
@@ -1312,6 +1354,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 87,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 6,
@@ -1320,6 +1363,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 86,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 3,
@@ -1339,6 +1383,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 89,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 0,
@@ -1347,6 +1392,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 88,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 0,
@@ -1366,6 +1412,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 89,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 2,
@@ -1374,6 +1421,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 88,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 1,
@@ -1393,6 +1441,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 89,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 4,
@@ -1401,6 +1450,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 88,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 2,
@@ -1420,6 +1470,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 89,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b11,
 			.shift = 6,
@@ -1428,6 +1479,7 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 		},
 		.regSpecsStore = {
 			.reg = 88,
+			.len = 2,
 			.maskedReg = true,
 			.mask = 0b1,
 			.shift = 3,
@@ -1455,6 +1507,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 45,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1477,6 +1530,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 46,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1499,6 +1553,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 47,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1521,6 +1576,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 48,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1543,6 +1599,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 49,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1565,6 +1622,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 50,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1587,6 +1645,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 51,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1609,6 +1668,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 53,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1631,6 +1691,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 54,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1653,6 +1714,7 @@ static struct DeviceAttrBean devAttrBeansSysMon[] = {
 		},
 		.regSpecsShow = {
 			.reg = 55,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1722,6 +1784,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 		},
 		.regSpecsShow = {
 			.reg = 16,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1744,6 +1807,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 		},
 		.regSpecsShow = {
 			.reg = 17,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1766,6 +1830,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 		},
 		.regSpecsShow = {
 			.reg = 18,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1788,6 +1853,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 		},
 		.regSpecsShow = {
 			.reg = 19,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1831,6 +1897,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 		},
 		.regSpecsShow = {
 			.reg = 24,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 0,
@@ -1853,6 +1920,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 		},
 		.regSpecsShow = {
 			.reg = 24,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 1,
@@ -1875,6 +1943,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 		},
 		.regSpecsShow = {
 			.reg = 24,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 2,
@@ -1897,6 +1966,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 		},
 		.regSpecsShow = {
 			.reg = 25,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1919,6 +1989,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 		},
 		.regSpecsShow = {
 			.reg = 26,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1941,6 +2012,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 		},
 		.regSpecsShow = {
 			.reg = 27,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -1971,6 +2043,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 96,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 15,
@@ -1993,6 +2066,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 97,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 7,
@@ -2015,6 +2089,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 96,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1111,
 			.shift = 6,
@@ -2037,6 +2112,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 96,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1111,
 			.shift = 0,
@@ -2059,6 +2135,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 97,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xff,
 			.shift = 8,
@@ -2081,6 +2158,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 97,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1111,
 			.shift = 0,
@@ -2103,6 +2181,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 98,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -2125,6 +2204,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 99,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -2147,6 +2227,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 		},
 		.regSpecsShow = {
 			.reg = 100,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -2188,6 +2269,7 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 		},
 		.regSpecsShow = {
 			.reg = 30,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 0,
@@ -2210,6 +2292,7 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 		},
 		.regSpecsShow = {
 			.reg = 30,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 1,
@@ -2232,6 +2315,7 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 		},
 		.regSpecsShow = {
 			.reg = 30,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 2,
@@ -2254,6 +2338,7 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 		},
 		.regSpecsShow = {
 			.reg = 30,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 3,
@@ -2344,6 +2429,7 @@ static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 58,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 15,
@@ -2366,6 +2452,7 @@ static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 58,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 14,
@@ -2388,6 +2475,7 @@ static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 59,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -2410,6 +2498,7 @@ static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 61,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 15,
@@ -2432,6 +2521,7 @@ static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 61,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 14,
@@ -2454,6 +2544,7 @@ static struct DeviceAttrBean devAttrBeansAnalogOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 62,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -2484,6 +2575,7 @@ static struct DeviceAttrBean devAttrBeansPowerOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 93,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 15,
@@ -2506,6 +2598,7 @@ static struct DeviceAttrBean devAttrBeansPowerOut[] = {
 		},
 		.regSpecsShow = {
 			.reg = 93,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0x7fff,
 			.shift = 0,
@@ -2536,6 +2629,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 90,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 0,
@@ -2558,6 +2652,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 90,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 1,
@@ -2580,6 +2675,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 90,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 2,
@@ -2602,6 +2698,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 90,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 3,
@@ -2624,6 +2721,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 90,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 4,
@@ -2646,6 +2744,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 90,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 5,
@@ -2669,6 +2768,7 @@ static struct DeviceAttrBean devAttrBeansSysPowerSwitch[] = {
 		},
 		.regSpecsShow = {
 			.reg = 92,
+			.len = 2,
 			.maskedReg = false,
 			.mask = 0xffff,
 			.shift = 0,
@@ -3136,7 +3236,7 @@ static void ionopimax_i2c_unlock(void) {
 	mutex_unlock(&ionopimax_i2c_client_data->update_lock);
 }
 
-static int32_t ionopimax_i2c_read_block_no_lock(uint8_t reg, uint8_t len) {
+static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 	int32_t res;
 	char buf[len];
 	uint8_t i;
@@ -3151,20 +3251,17 @@ static int32_t ionopimax_i2c_read_block_no_lock(uint8_t reg, uint8_t len) {
 	for (i = 0; i < len; i++) {
 		res |= (buf[i] & 0xff) << (i * 8);
 	}
-//	printk(KERN_INFO "ionopimax: - | I2C read res=%d b0=%u b1=%u\n", res,
-//			buf[0] & 0xff, buf[1] & 0xff);
 
+//	printk(KERN_INFO "ionopimax: - | I2C read res=%d b0=%u b1=%u b2=%u\n", res,
+//			buf[0] & 0xff, buf[1] & 0xff, len == 3 ? buf[2] & 0xff : 0);
+//
 //	printk(KERN_INFO "ionopimax: - | I2C read word=%d\n",
 //			i2c_smbus_read_word_data(ionopimax_i2c_client, reg));
 
 	return res;
 }
 
-static int32_t ionopimax_i2c_read_no_lock(uint8_t reg) {
-	return ionopimax_i2c_read_block_no_lock(reg, 2);
-}
-
-static int32_t ionopimax_i2c_write_block_no_lock(uint8_t reg, uint8_t len,
+static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 		uint32_t val) {
 	char buf[len];
 	uint8_t i;
@@ -3181,18 +3278,14 @@ static int32_t ionopimax_i2c_write_block_no_lock(uint8_t reg, uint8_t len,
 	return len;
 }
 
-static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint16_t val) {
-	return ionopimax_i2c_write_block_no_lock(reg, 2, val);
-}
-
-static int32_t ionopimax_i2c_read(uint8_t reg) {
+static int32_t ionopimax_i2c_read(uint8_t reg, uint8_t len) {
 	int32_t res;
 
 	if (!ionopimax_i2c_lock()) {
 		return -EBUSY;
 	}
 
-	res = ionopimax_i2c_read_no_lock(reg);
+	res = ionopimax_i2c_read_no_lock(reg, len);
 
 	ionopimax_i2c_unlock();
 
@@ -3204,14 +3297,14 @@ static int32_t ionopimax_i2c_read(uint8_t reg) {
 	return res;
 }
 
-static int32_t ionopimax_i2c_write(uint8_t reg, uint16_t val) {
+static int32_t ionopimax_i2c_write(uint8_t reg, uint8_t len, uint32_t val) {
 	int32_t res;
 
 	if (!ionopimax_i2c_lock()) {
 		return -EBUSY;
 	}
 
-	res = ionopimax_i2c_write_no_lock(reg, val);
+	res = ionopimax_i2c_write_no_lock(reg, len, val);
 
 	ionopimax_i2c_unlock();
 
@@ -3223,10 +3316,10 @@ static int32_t ionopimax_i2c_write(uint8_t reg, uint16_t val) {
 	return res;
 }
 
-static int32_t ionopimax_i2c_read_segment(uint8_t reg, int16_t mask,
-		uint8_t shift) {
+static int32_t ionopimax_i2c_read_segment(uint8_t reg, uint8_t len,
+		uint32_t mask, uint8_t shift) {
 	int32_t res;
-	res = ionopimax_i2c_read(reg);
+	res = ionopimax_i2c_read(reg, len);
 	if (res < 0) {
 		return res;
 	}
@@ -3234,7 +3327,7 @@ static int32_t ionopimax_i2c_read_segment(uint8_t reg, int16_t mask,
 }
 
 static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
-		int16_t mask, uint8_t shift, uint16_t val) {
+		uint32_t mask, uint8_t shift, uint32_t val) {
 	int32_t res = 0;
 
 	if (!ionopimax_i2c_lock()) {
@@ -3247,12 +3340,12 @@ static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
 	if (maskedReg) {
 		val = (mask << 8) | val;
 	} else if (mask != 0xffff) {
-		res = ionopimax_i2c_read_no_lock(reg);
+		res = ionopimax_i2c_read_no_lock(reg, 2);
 		val = (res & ~mask) | val;
 	}
 
 	if (res >= 0) {
-		res = ionopimax_i2c_write_no_lock(reg, val);
+		res = ionopimax_i2c_write_no_lock(reg, 2, val);
 	}
 
 	ionopimax_i2c_unlock();
@@ -3276,8 +3369,8 @@ static ssize_t devAttrI2c_show(struct device* dev,
 		return -EFAULT;
 	}
 
-	res = ionopimax_i2c_read_segment((uint8_t) specs->reg, specs->mask,
-			specs->shift);
+	res = ionopimax_i2c_read_segment((uint8_t) specs->reg, specs->len,
+			specs->mask, specs->shift);
 
 	if (res < 0) {
 		return res;
@@ -3285,7 +3378,15 @@ static ssize_t devAttrI2c_show(struct device* dev,
 
 	if (specs->vals == NULL) {
 		if (specs->sign) {
-			return sprintf(buf, "%d\n", (int16_t) res);
+			if (specs->len == 3) {
+				if ((res & 0x800000) == 0x800000) {
+					// negative
+					res |= 0xff000000;
+				}
+				return sprintf(buf, "%d\n", (int32_t) res);
+			} else {
+				return sprintf(buf, "%d\n", (int16_t) res);
+			}
 		} else {
 			return sprintf(buf, "%d\n", res);
 		}
@@ -3735,7 +3836,7 @@ static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
 static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t val;
-	val = ionopimax_i2c_read(0);
+	val = ionopimax_i2c_read(0, 2);
 
 	if (val < 0) {
 		return val;
@@ -3747,7 +3848,7 @@ static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 static ssize_t devAttrMcuConfig_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count) {
 	int32_t res;
-	uint16_t val;
+	uint32_t val;
 	uint16_t i;
 	char cmd;
 	cmd = toUpper(buf[0]);
@@ -3760,14 +3861,14 @@ static ssize_t devAttrMcuConfig_store(struct device* dev,
 		return -EINVAL;
 	}
 
-	res = ionopimax_i2c_write(2, val);
+	res = ionopimax_i2c_write(2, 2, val);
 	if (res < 0) {
 		return res;
 	}
 
 	for (i = 0; i < 10; i++) {
 		msleep(50);
-		res = ionopimax_i2c_read(3);
+		res = ionopimax_i2c_read(3, 2);
 		if (res >= 0) {
 			if (((res >> 8) & 1) == 0) {
 				if (((res >> 6) & 1) == 1) {
@@ -3800,7 +3901,7 @@ static ssize_t mcuI2cRead_store(struct device* dev,
 		return ret;
 	}
 
-	mcuI2cReadVal = ionopimax_i2c_read((uint8_t) reg);
+	mcuI2cReadVal = ionopimax_i2c_read((uint8_t) reg, 2);
 
 	if (mcuI2cReadVal < 0) {
 		return mcuI2cReadVal;
@@ -3818,7 +3919,7 @@ static ssize_t mcuI2cWrite_store(struct device* dev,
 	reg = simple_strtol(buf, &end, 10);
 	val = simple_strtol(end + 1, NULL, 16);
 
-	if (ionopimax_i2c_write((uint8_t) reg, (uint16_t) val) < 0) {
+	if (ionopimax_i2c_write((uint8_t) reg, 2, (uint32_t) val) < 0) {
 		return -EIO;
 	}
 
