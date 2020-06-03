@@ -3136,14 +3136,53 @@ static void ionopimax_i2c_unlock(void) {
 	mutex_unlock(&ionopimax_i2c_client_data->update_lock);
 }
 
+static int32_t ionopimax_i2c_read_block_no_lock(uint8_t reg, uint8_t len) {
+	int32_t res;
+	char buf[len];
+	uint8_t i;
+
+//	printk(KERN_INFO "ionopimax: - | I2C read reg=%u len=%u\n", reg, len);
+	res = i2c_smbus_read_i2c_block_data(ionopimax_i2c_client, reg, len, buf);
+//	printk(KERN_INFO "ionopimax: - | I2C read res=%d\n", res);
+	if (res != len) {
+		return -EIO;
+	}
+	res = 0;
+	for (i = 0; i < len; i++) {
+		res |= (buf[i] & 0xff) << (i * 8);
+	}
+//	printk(KERN_INFO "ionopimax: - | I2C read res=%d b0=%u b1=%u\n", res,
+//			buf[0] & 0xff, buf[1] & 0xff);
+
+//	printk(KERN_INFO "ionopimax: - | I2C read word=%d\n",
+//			i2c_smbus_read_word_data(ionopimax_i2c_client, reg));
+
+	return res;
+}
+
 static int32_t ionopimax_i2c_read_no_lock(uint8_t reg) {
-	// printk(KERN_INFO "ionopimax: - | I2C read reg=%u\n", reg);
-	return i2c_smbus_read_word_data(ionopimax_i2c_client, reg);
+	return ionopimax_i2c_read_block_no_lock(reg, 2);
+}
+
+static int32_t ionopimax_i2c_write_block_no_lock(uint8_t reg, uint8_t len,
+		uint32_t val) {
+	char buf[len];
+	uint8_t i;
+
+//	printk(KERN_INFO "ionopimax: - | I2C write reg=%u len=%u val=0x%04x\n", reg,
+//			len, val);
+
+	for (i = 0; i < len; i++) {
+		buf[i] = val >> (8 * i);
+	}
+	if (i2c_smbus_write_i2c_block_data(ionopimax_i2c_client, reg, len, buf)) {
+		return -EIO;
+	}
+	return len;
 }
 
 static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint16_t val) {
-	// printk(KERN_INFO "ionopimax: - | I2C write reg=%u val=0x%04x\n", reg, val);
-	return i2c_smbus_write_word_data(ionopimax_i2c_client, reg, val);
+	return ionopimax_i2c_write_block_no_lock(reg, 2, val);
 }
 
 static int32_t ionopimax_i2c_read(uint8_t reg) {
