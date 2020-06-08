@@ -3123,8 +3123,6 @@ struct ionopimax_i2c_data {
 	struct mutex update_lock;
 };
 
-struct ionopimax_i2c_data *ionopimax_i2c_client_data = NULL;
-
 static char toUpper(char c) {
 	if (c >= 97 && c <= 122) {
 		return c - 32;
@@ -3229,16 +3227,21 @@ static ssize_t devAttrGpioBlink_store(struct device* dev,
 }
 
 static bool ionopimax_i2c_lock(void) {
-	ionopimax_i2c_client_data = i2c_get_clientdata(ionopimax_i2c_client);
-	if (!mutex_trylock(&ionopimax_i2c_client_data->update_lock)) {
-		printk(KERN_ALERT "ionopimax: * | I2C busy\n");
-		return false;
+	uint8_t i;
+	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
+
+	for (i = 0; i < 20; i++) {
+		if (mutex_trylock(&data->update_lock)) {
+			return true;
+		}
+		msleep(1);
 	}
-	return true;
+	return false;
 }
 
 static void ionopimax_i2c_unlock(void) {
-	mutex_unlock(&ionopimax_i2c_client_data->update_lock);
+	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
+	mutex_unlock(&data->update_lock);
 }
 
 static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
@@ -3246,22 +3249,31 @@ static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 	char buf[len];
 	uint8_t i;
 
-//	printk(KERN_INFO "ionopimax: - | I2C read reg=%u len=%u\n", reg, len);
-	res = i2c_smbus_read_i2c_block_data(ionopimax_i2c_client, reg, len, buf);
-//	printk(KERN_INFO "ionopimax: - | I2C read res=%d\n", res);
+//	printk(KERN_INFO "ionopimax: - | I2C read reg=%u len=%u\n", reg, len); // TODO remove
+
+	for (i = 0; i < 3; i++) {
+		res = i2c_smbus_read_i2c_block_data(ionopimax_i2c_client, reg, len,
+				buf);
+//		printk(KERN_INFO "ionopimax: - | I2C read %d res=%d\n", i, res); // TODO remove
+		if (res == len) {
+			break;
+		}
+	}
+
 	if (res != len) {
 		return -EIO;
 	}
+
 	res = 0;
 	for (i = 0; i < len; i++) {
 		res |= (buf[i] & 0xff) << (i * 8);
 	}
 
 //	printk(KERN_INFO "ionopimax: - | I2C read res=%d b0=%u b1=%u b2=%u\n", res,
-//			buf[0] & 0xff, buf[1] & 0xff, len == 3 ? buf[2] & 0xff : 0);
+//			buf[0] & 0xff, buf[1] & 0xff, len == 3 ? buf[2] & 0xff : 0);  // TODO remove
 //
 //	printk(KERN_INFO "ionopimax: - | I2C read word=%d\n",
-//			i2c_smbus_read_word_data(ionopimax_i2c_client, reg));
+//			i2c_smbus_read_word_data(ionopimax_i2c_client, reg));  // TODO remove
 
 	return res;
 }
@@ -3271,16 +3283,19 @@ static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 	char buf[len];
 	uint8_t i;
 
-//	printk(KERN_INFO "ionopimax: - | I2C write reg=%u len=%u val=0x%04x\n", reg,
-//			len, val);
-
 	for (i = 0; i < len; i++) {
 		buf[i] = val >> (8 * i);
 	}
-	if (i2c_smbus_write_i2c_block_data(ionopimax_i2c_client, reg, len, buf)) {
-		return -EIO;
+	for (i = 0; i < 3; i++) {
+//		printk(
+//		KERN_INFO "ionopimax: - | I2C write %d reg=%u len=%u val=0x%04x\n",
+//				i, reg, len, val); // TODO remove
+		if (!i2c_smbus_write_i2c_block_data(ionopimax_i2c_client, reg, len,
+				buf)) {
+			return len;
+		}
 	}
-	return len;
+	return -EIO;
 }
 
 static int32_t ionopimax_i2c_read(uint8_t reg, uint8_t len) {
@@ -3297,8 +3312,6 @@ static int32_t ionopimax_i2c_read(uint8_t reg, uint8_t len) {
 	res = ionopimax_i2c_read_no_lock(reg, len);
 
 	ionopimax_i2c_unlock();
-
-	// TODO implement retry logic if fails
 
 	if (res < 0) {
 		return -EIO;
@@ -3317,7 +3330,7 @@ static int32_t ionopimax_i2c_write(uint8_t reg, uint8_t len, uint32_t val) {
 
 	ionopimax_i2c_unlock();
 
-	// TODO implement retry logic and check written value
+	// TODO check written value
 
 	if (res < 0) {
 		return -EIO;
@@ -4097,9 +4110,6 @@ static int __init ionopimax_init(void) {
 
 				strcpy(gpioReqNamePart + strlen(devices[di].name) + 1,
 						devices[di].devAttrBeans[ai].devAttr.attr.name);
-
-				// TODO remove
-				// printk(KERN_ALERT "ionopimax: * | requesting GPIO %s\n", gpioReqName);
 
 				gpio_request(devices[di].devAttrBeans[ai].gpio, gpioReqName);
 				if (devices[di].devAttrBeans[ai].gpioMode == GPIO_MODE_OUT) {
