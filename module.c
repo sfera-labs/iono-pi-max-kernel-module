@@ -75,6 +75,7 @@ struct WiegandBean {
 	bool enabled;
 	uint64_t data;
 	int bitCount;
+	int noise;
 	struct timespec lastBitTs;
 };
 
@@ -108,6 +109,9 @@ static ssize_t devAttrWiegandEnabled_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
 static ssize_t devAttrWiegandData_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrWiegandNoise_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
 static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
@@ -164,6 +168,7 @@ static struct WiegandBean w1 = {
 	.pulseWidthMax_usec = 150,
 	.pulseIntervalMin_usec = 1200,
 	.pulseIntervalMax_usec = 2700,
+	.noise = 0,
 };
 
 static struct WiegandBean w2 = {
@@ -180,6 +185,7 @@ static struct WiegandBean w2 = {
 	.pulseWidthMax_usec = 150,
 	.pulseIntervalMin_usec = 1200,
 	.pulseIntervalMax_usec = 2700,
+	.noise = 0,
 };
 
 static struct DeviceAttrBean devAttrBeansBuzzer[] = {
@@ -2790,6 +2796,17 @@ static struct DeviceAttrBean devAttrBeansWiegand[] = {
 	{
 		.devAttr = {
 			.attr = {
+				.name = "w1_noise",
+				.mode = 0440,
+			},
+			.show = devAttrWiegandNoise_show,
+			.store = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
 				.name = "w1_pulse_itvl_min",
 				.mode = 0660,
 			},
@@ -2849,6 +2866,17 @@ static struct DeviceAttrBean devAttrBeansWiegand[] = {
 				.mode = 0440,
 			},
 			.show = devAttrWiegandData_show,
+			.store = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "w2_noise",
+				.mode = 0440,
+			},
+			.show = devAttrWiegandNoise_show,
 			.store = NULL,
 		}
 	},
@@ -3258,6 +3286,10 @@ static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 static int32_t ionopimax_i2c_read(uint8_t reg, uint8_t len) {
 	int32_t res;
 
+	if (len < 2) {
+		return -EINVAL;
+	}
+
 	if (!ionopimax_i2c_lock()) {
 		return -EBUSY;
 	}
@@ -3500,8 +3532,7 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 
 	if (l->wasLow == isLow) {
 		// got the interrupt but didn't change state. Maybe a fast pulse
-		printk(KERN_ALERT "ionopimax: * | repeated interrupt on GPIO %d\n",
-				l->gpio);
+		w->noise = 10;
 		return (irq_handler_t) IRQ_HANDLED;
 	}
 
@@ -3513,8 +3544,7 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 
 			if (diff < w->pulseIntervalMin_usec) {
 				// pulse too early
-				// TODO remove
-				printk(KERN_ALERT "ionopimax: * | pulse too early\n");
+				w->noise = 11;
 				goto noise;
 			}
 
@@ -3526,9 +3556,7 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 
 		if (w->activeLine != NULL) {
 			// there's movement on both lines
-			// TODO remove
-			printk(
-			KERN_ALERT "ionopimax: * | there's movement on both lines\n");
+			w->noise = 12;
 			goto noise;
 		}
 
@@ -3540,9 +3568,7 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 	} else {
 		if (w->activeLine != l) {
 			// there's movement on both lines or previous noise
-			// TODO remove
-			printk(
-					KERN_ALERT "ionopimax: * | there's movement on both lines or previous noise\n");
+			w->noise = 13;
 			goto noise;
 		}
 
@@ -3553,10 +3579,14 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 		}
 
 		diff = diff_usec((struct timespec *) &(w->lastBitTs), &now);
-		if (diff < w->pulseWidthMin_usec || diff > w->pulseWidthMax_usec) {
-			// pulse too short or too long
-			// TODO remove
-			printk(KERN_ALERT "ionopimax: * | pulse too short or too long\n");
+		if (diff < w->pulseWidthMin_usec) {
+			// pulse too short
+			w->noise = 14;
+			goto noise;
+		}
+		if (diff > w->pulseWidthMax_usec) {
+			// pulse too long
+			w->noise = 15;
 			goto noise;
 		}
 
@@ -3678,6 +3708,7 @@ static ssize_t devAttrWiegandEnabled_store(struct device* dev,
 	}
 
 	if (enable) {
+		w->noise = 0;
 		wiegandReset(w);
 	} else {
 		wiegandDisable(w);
@@ -3706,8 +3737,18 @@ static ssize_t devAttrWiegandData_show(struct device* dev,
 		return -EBUSY;
 	}
 
+	w->noise = 0;
+
 	return sprintf(buf, "%lu %d %llu\n", to_usec(&w->lastBitTs), w->bitCount,
 			w->data);
+}
+
+static ssize_t devAttrWiegandNoise_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct WiegandBean* w;
+	w = getWiegandBean(dev, attr);
+
+	return sprintf(buf, "%d\n", w->noise);
 }
 
 static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
