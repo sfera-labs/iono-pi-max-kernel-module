@@ -3368,13 +3368,16 @@ static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
 
 	if (res >= 0) {
 		res = ionopimax_i2c_write_no_lock(reg, 2, val);
+		if (res >= 0) {
+			res = ionopimax_i2c_read_no_lock(reg, 2);
+			if (res >= 0 && res != val) {
+				res = -EPERM;
+			}
+		}
 	}
 
 	ionopimax_i2c_unlock();
 
-	if (res < 0) {
-		return -EIO;
-	}
 	return res;
 }
 
@@ -3458,6 +3461,10 @@ static ssize_t devAttrI2c_store(struct device* dev,
 		if (val == -1) {
 			return -EINVAL;
 		}
+	}
+
+	if (!specs->sign && val < 0) {
+		return -EINVAL;
 	}
 
 	res = ionopimax_i2c_write_segment((uint8_t) specs->reg, specs->maskedReg,
