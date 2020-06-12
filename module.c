@@ -3330,8 +3330,6 @@ static int32_t ionopimax_i2c_write(uint8_t reg, uint8_t len, uint32_t val) {
 
 	ionopimax_i2c_unlock();
 
-	// TODO check written value
-
 	if (res < 0) {
 		return -EIO;
 	}
@@ -3370,8 +3368,14 @@ static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
 		res = ionopimax_i2c_write_no_lock(reg, 2, val);
 		if (res >= 0) {
 			res = ionopimax_i2c_read_no_lock(reg, 2);
-			if (res >= 0 && res != val) {
-				res = -EPERM;
+			if (res >= 0) {
+				if (maskedReg) {
+					res &= mask;
+					val &= mask;
+				}
+				if (res != val) {
+					res = -EPERM;
+				}
 			}
 		}
 	}
