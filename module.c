@@ -28,6 +28,9 @@
 #define GPIO_MODE_IN 1
 #define GPIO_MODE_OUT 2
 
+#define GPIO_SW_EN 41
+#define GPIO_SW_RESET 45
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
@@ -3159,7 +3162,7 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 			.store = devAttrGpio_store,
 		},
 		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 41,
+		.gpio = GPIO_SW_EN,
 	},
 
 	{
@@ -3172,7 +3175,7 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 			.store = devAttrGpio_store,
 		},
 		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 45,
+		.gpio = GPIO_SW_RESET,
 	},
 
 	{
@@ -3828,9 +3831,6 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 static void wiegandDisable(struct WiegandBean* w) {
 	w->enabled = false;
 
-	gpio_unexport(w->d0.gpio);
-	gpio_unexport(w->d1.gpio);
-
 	gpio_free(w->d0.gpio);
 	gpio_free(w->d1.gpio);
 
@@ -3888,8 +3888,6 @@ static ssize_t devAttrWiegandEnabled_store(struct device* dev,
 		} else {
 			gpio_set_debounce(w->d0.gpio, 0);
 			gpio_set_debounce(w->d1.gpio, 0);
-			gpio_export(w->d0.gpio, false);
-			gpio_export(w->d1.gpio, false);
 
 			w->d0.irq = gpio_to_irq(w->d0.gpio);
 			w->d1.irq = gpio_to_irq(w->d1.gpio);
@@ -4226,6 +4224,9 @@ static void cleanup(void) {
 	}
 	i2c_del_driver(&ionopimax_i2c_driver);
 
+	gpio_free(GPIO_SW_RESET);
+	gpio_free(GPIO_SW_EN);
+
 	di = 0;
 	while (devices[di].name != NULL) {
 		if (devices[di].pDevice && !IS_ERR(devices[di].pDevice)) {
@@ -4234,7 +4235,6 @@ static void cleanup(void) {
 				device_remove_file(devices[di].pDevice,
 						&devices[di].devAttrBeans[ai].devAttr);
 				if (devices[di].devAttrBeans[ai].gpioMode != 0) {
-					gpio_unexport(devices[di].devAttrBeans[ai].gpio);
 					gpio_free(devices[di].devAttrBeans[ai].gpio);
 				}
 				ai++;
@@ -4329,12 +4329,14 @@ static int __init ionopimax_init(void) {
 							devices[di].devAttrBeans[ai].gpio);
 					goto fail;
 				}
-				gpio_export(devices[di].devAttrBeans[ai].gpio, false);
 			}
 			ai++;
 		}
 		di++;
 	}
+
+	gpio_set_value(GPIO_SW_EN, 0);
+	gpio_set_value(GPIO_SW_RESET, 1);
 
 	printk(KERN_INFO "ionopimax: - | ready\n");
 	return 0;
