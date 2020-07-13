@@ -1,0 +1,21 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";
+	
+	fragment@0 {
+		target = <&i2c_arm>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+			
+			ionopimax: ionopimax@35 {
+				compatible = "sferalabs,ionopimax";
+				reg = <0x35>;
+				status = "okay";
+			};
+		};
+	};
+};

@@ -3424,6 +3424,10 @@ static ssize_t devAttrGpioBlink_store(struct device* dev,
 
 static bool ionopimax_i2c_lock(void) {
 	uint8_t i;
+	if (!ionopimax_i2c_client) {
+		return false;
+	}
+
 	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
 
 	for (i = 0; i < 20; i++) {
@@ -3436,8 +3440,10 @@ static bool ionopimax_i2c_lock(void) {
 }
 
 static void ionopimax_i2c_unlock(void) {
-	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
-	mutex_unlock(&data->update_lock);
+	if (ionopimax_i2c_client) {
+		struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
+		mutex_unlock(&data->update_lock);
+	}
 }
 
 static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
@@ -3446,6 +3452,10 @@ static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 	uint8_t i;
 
 //	printk(KERN_INFO "ionopimax: - | I2C read reg=%u len=%u\n", reg, len); // TODO remove
+
+	if (!ionopimax_i2c_client) {
+		return -EIO;
+	}
 
 	for (i = 0; i < 3; i++) {
 		res = i2c_smbus_read_i2c_block_data(ionopimax_i2c_client, reg, len,
@@ -3478,6 +3488,10 @@ static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 		uint32_t val) {
 	char buf[len];
 	uint8_t i;
+
+	if (!ionopimax_i2c_client) {
+		return -EIO;
+	}
 
 	for (i = 0; i < len; i++) {
 		buf[i] = val >> (8 * i);
@@ -4172,13 +4186,9 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->update_lock);
 
-// printk(KERN_INFO "ionopimax: - | ionopimax_i2c_probe device addr 0x%02hx\n", client->addr);
-	if (client->addr != I2C_ADDR_LOCAL) {
-		// TODO test communication and add external device and sysFs files
-		printk(
-				KERN_INFO "ionopimax: - | ionopimax_i2c_probe external device 0x%02hx\n",
-				client->addr);
-	}
+	ionopimax_i2c_client = client;
+
+	printk(KERN_INFO "ionopimax: - | i2c probe addr=0x%02hx\n", client->addr);
 
 	return 0;
 }
@@ -4187,41 +4197,37 @@ static int ionopimax_i2c_remove(struct i2c_client *client) {
 	struct ionopimax_i2c_data *data = i2c_get_clientdata(client);
 	mutex_destroy(&data->update_lock);
 
-// printk(KERN_INFO "ionopimax: - | ionopimax_i2c_remove device addr 0x%02hx\n", client->addr);
-	if (client->addr != I2C_ADDR_LOCAL) {
-		// TODO remove external device and sysFs files
-		printk(
-				KERN_INFO "ionopimax: - | ionopimax_i2c_remove external device 0x%02hx\n",
-				client->addr);
-	}
+	printk(KERN_INFO "ionopimax: - | i2c remove addr=0x%02hx\n", client->addr);
 
 	return 0;
 }
 
-static const struct i2c_device_id ionopimax_i2c_id[] =
-		{ { "ionopimax", 0 }, { } };
+const struct of_device_id ionopimax_of_match[] = {
+	{ .compatible = "sferalabs,ionopimax", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, ionopimax_of_match);
 
+static const struct i2c_device_id ionopimax_i2c_id[] = {
+	{ "ionopimax", 0 },
+	{ },
+};
 MODULE_DEVICE_TABLE(i2c, ionopimax_i2c_id);
 
 static struct i2c_driver ionopimax_i2c_driver = {
 	.driver = {
 		.name = "ionopimax",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(ionopimax_of_match),
 	},
 	.probe = ionopimax_i2c_probe,
 	.remove = ionopimax_i2c_remove,
 	.id_table = ionopimax_i2c_id,
 };
 
-static struct i2c_board_info ionopimax_i2c_board_info[] __initdata = {
-	{ I2C_BOARD_INFO("ionopimax", I2C_ADDR_LOCAL) }
-};
-
 static void cleanup(void) {
 	int di, ai;
 
-	if (ionopimax_i2c_client) {
-		i2c_unregister_device(ionopimax_i2c_client);
-	}
 	i2c_del_driver(&ionopimax_i2c_driver);
 
 	gpio_free(GPIO_SW_RESET);
@@ -4265,21 +4271,6 @@ static int __init ionopimax_init(void) {
 	gpioReqNamePart = gpioReqName + strlen("ionopimax_");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
-
-	i2cAdapter1 = i2c_get_adapter(1);
-	if (!i2cAdapter1) {
-		printk(
-				KERN_ALERT "ionopimax: * | I2C bus 1 not found, have you enabled it?\n");
-		goto fail;
-	}
-
-	ionopimax_i2c_client = i2c_new_device(i2cAdapter1,
-			ionopimax_i2c_board_info);
-	if (!ionopimax_i2c_client) {
-		printk(
-		KERN_ALERT "ionopimax: * | error creating ionopimax I2C device\n");
-		goto fail;
-	}
 
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
 	if (IS_ERR(pDeviceClass)) {
