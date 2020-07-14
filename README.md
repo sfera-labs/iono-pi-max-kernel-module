@@ -1,26 +1,42 @@
 # Iono Pi Max driver kernel module
 
-Raspberry Pi kernel module for using [Iono Pi Max](https://www.sferalabs.cc/iono-pi-max/) via sysfs.
+Kernel module for using [Iono Pi Max](https://www.sferalabs.cc/iono-pi-max/) via sysfs files.
+
+For example, from the shell:
+
+Close a relay:
+
+    $ echo 1 > /sys/class/ionopimax/digital_out/o1
+    
+Read the voltage on AV1:
+
+    $ cat /sys/class/ionopimax/analog_in/av1
+    
+Or using Python:
+
+    f = open('/sys/class/ionopimax/digital_out/o1', 'w')
+    f.write('1')
+    f.close()
+    print('Relay O1 closed')
+
+    f = open('/sys/class/ionopimax/analog_in/av1', 'r')
+    val = f.read().strip()
+    f.close()
+    print('AV1: ' + val)
 
 ## Compile and Install
 
 If you don't have git installed:
 
-    sudo apt-get install git-core
+    sudo apt install git
 
 Clone this repo:
 
-    git clone --depth 1 https://github.com/sfera-labs-dev/iono-pi-max-kernel-module.git
+    git clone --depth 1 https://github.com/sfera-labs/iono-pi-max-kernel-module.git
     
 Install the Raspberry Pi kernel headers:
 
-    sudo apt-get install raspberrypi-kernel-headers
-    
-Enable I2C:
-
-    sudo raspi-config
-    
-Select: Interfacing Options -> I2C -> Yes
+    sudo apt install raspberrypi-kernel-headers
 
 Make and install:
 
@@ -28,41 +44,27 @@ Make and install:
     make
     sudo make install
     
-Load the module:
+Compile the Device Tree and install it:
 
-    sudo insmod ionopimax.ko
+    dtc -@ -Hepapr -I dts -O dtb -o ionopimax.dtbo ionopimax.dts
+    sudo cp ionopimax.dtbo /boot/overlays/
 
-Check that it was loaded correctly from the kernel log:
+Add to `/boot/config.txt` the following line:
 
-    sudo tail -f /var/log/kern.log
+    dtoverlay=ionopi
 
-You will see something like:
-
-    ...
-    Sep  3 11:49:18 raspberrypi kernel: [   59.855723] ionopimax: - | init
-    Sep  3 11:49:18 raspberrypi kernel: [   60.043024] ionopimax: - | ready
-    ...
-
-Optionally, to have the module automatically loaded at boot add `ionopimax` in `/etc/modules`.
-
-E.g.:
-
-    sudo sh -c "echo 'ionopimax' >> /etc/modules"
-
-Optionally, to be able to use the `/sys/` files not as super user, create a new group "ionopimax" and set it as the module owner group by adding an udev rule:
+Optionally, to be able to use the `/sys/class/ionopimax/` files not as super user, create a new group "ionopimax" and set it as the module owner group by adding an udev rule:
 
     sudo groupadd ionopimax
     sudo cp 99-ionopimax.rules /etc/udev/rules.d/
 
-and add your user to the group, e.g., for user "pi":
+and add your user to the group, e.g. for user "pi":
 
     sudo usermod -a -G ionopimax pi
 
-then re-login to apply the group change and reload the module:
+Reboot:
 
-    su - $USER
-    sudo rmmod ionopimax.ko
-    sudo insmod ionopimax.ko
+    sudo reboot
 
 ## Usage
 
