@@ -28,6 +28,11 @@
 #define GPIO_MODE_IN 1
 #define GPIO_MODE_OUT 2
 
+#define GPIO_DT1 29
+#define GPIO_DT2 34
+#define GPIO_DT3 35
+#define GPIO_DT4 36
+
 #define GPIO_SW_EN 41
 #define GPIO_SW_RESET 45
 
@@ -94,6 +99,12 @@ static ssize_t devAttrGpio_store(struct device* dev,
 static ssize_t devAttrGpioBlink_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
+static ssize_t devAttrDtMode_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrDtMode_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
 static ssize_t devAttrI2c_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
@@ -151,20 +162,27 @@ static ssize_t mcuI2cRead_store(struct device* dev,
 static ssize_t mcuI2cWrite_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
-static const char VALS_DIGITAL_OUTS_STATUS[] = { 4, '0', '1', 'F', 'A' };
+static const char VALS_DIGITAL_OUTS_STATUS[] = { 4, '0', '1', 'F', 'S' };
 static const char VALS_WATCHDOG_ENABLE_MODE[] = { 2, 'D', 'A' };
 static const char VALS_POWER_DOWN_ENABLE_MODE[] = { 2, 'I', 'A' };
 static const char VALS_POWER_UP_MODE[] = { 2, 'M', 'A' };
 static const char VALS_SD_SDX_ROUTING[] = { 2, 'A', 'B' };
 static const char VALS_ANALOG_OUTS_MODE[] = { 2, 'I', 'V' };
+static const char VALS_ANALOG_INS_MODE[] = { 2, 'U', 'B' };
+static const char VALS_UPS_BATTERY_TYPE[] = { 3, 0, 'N', 'P' };
+
+static bool dt1enabled = false;
+static bool dt2enabled = false;
+static bool dt3enabled = false;
+static bool dt4enabled = false;
 
 static struct WiegandBean w1 = {
 	.d0 = {
-		.gpio = 29,
+		.gpio = GPIO_DT1,
 		.irqRequested = false,
 	},
 	.d1 = {
-		.gpio = 34,
+		.gpio = GPIO_DT2,
 		.irqRequested = false,
 	},
 	.enabled = false,
@@ -177,11 +195,11 @@ static struct WiegandBean w1 = {
 
 static struct WiegandBean w2 = {
 	.d0 = {
-		.gpio = 35,
+		.gpio = GPIO_DT3,
 		.irqRequested = false,
 	},
 	.d1 = {
-		.gpio = 36,
+		.gpio = GPIO_DT4,
 		.irqRequested = false,
 	},
 	.enabled = false,
@@ -204,6 +222,7 @@ static struct DeviceAttrBean devAttrBeansBuzzer[] = {
 		},
 		.gpioMode = GPIO_MODE_OUT,
 		.gpio = 40,
+		.invert = true,
 	},
 
 	{
@@ -700,7 +719,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 4,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -720,7 +739,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 5,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -740,7 +759,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 6,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -760,7 +779,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 7,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -860,8 +879,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b11,
 			.shift = 12,
 			.sign = false,
-			.vals = NULL, // TODO use vals?
-				},
+			.vals = NULL,
+		},
 	},
 
 	{
@@ -880,8 +899,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b11,
 			.shift = 14,
 			.sign = false,
-			.vals = NULL, // TODO use vals?
-				},
+			.vals = NULL,
+		},
 	},
 
 	{
@@ -1088,107 +1107,105 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 };
 
 static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
-	/*
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt1_direction",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show, // TODO dtDirection_show
-	 .store = devAttrGpio_store, // TODO dtDirection_store
-	 },
-	 .gpio = 29,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt1_mode",
+				.mode = 0660,
+			},
+			.show = devAttrDtMode_show,
+			.store = devAttrDtMode_store,
+		},
+		.gpio = GPIO_DT1,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt2_direction",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show, // TODO dtDirection_show
-	 .store = devAttrGpio_store, // TODO dtDirection_store
-	 },
-	 .gpio = 34,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt2_mode",
+				.mode = 0660,
+			},
+			.show = devAttrDtMode_show,
+			.store = devAttrDtMode_store,
+		},
+		.gpio = GPIO_DT2,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt3_direction",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show, // TODO dtDirection_show
-	 .store = devAttrGpio_store, // TODO dtDirection_store
-	 },
-	 .gpio = 35,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt3_mode",
+				.mode = 0660,
+			},
+			.show = devAttrDtMode_show,
+			.store = devAttrDtMode_store,
+		},
+		.gpio = GPIO_DT3,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt4_direction",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show, // TODO dtDirection_show
-	 .store = devAttrGpio_store, // TODO dtDirection_store
-	 },
-	 .gpio = 36,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt4_mode",
+				.mode = 0660,
+			},
+			.show = devAttrDtMode_show,
+			.store = devAttrDtMode_store,
+		},
+		.gpio = GPIO_DT4,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt1",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show,
-	 .store = devAttrGpio_store,
-	 },
-	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-	 .gpio = 29,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt1",
+				.mode = 0660,
+			},
+			.show = devAttrGpio_show,
+			.store = devAttrGpio_store,
+		},
+		.gpioMode = 0,
+		.gpio = GPIO_DT1,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt2",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show,
-	 .store = devAttrGpio_store,
-	 },
-	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-	 .gpio = 34,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt2",
+				.mode = 0660,
+			},
+			.show = devAttrGpio_show,
+			.store = devAttrGpio_store,
+		},
+		.gpioMode = 0,
+		.gpio = GPIO_DT2,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt3",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show,
-	 .store = devAttrGpio_store,
-	 },
-	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-	 .gpio = 35,
-	 },
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt3",
+				.mode = 0660,
+			},
+			.show = devAttrGpio_show,
+			.store = devAttrGpio_store,
+		},
+		.gpioMode = 0,
+		.gpio = GPIO_DT3,
+	},
 
-	 {
-	 .devAttr = {
-	 .attr = {
-	 .name = "dt4",
-	 .mode = 0660,
-	 },
-	 .show = devAttrGpio_show,
-	 .store = devAttrGpio_store,
-	 },
-	 .gpioMode = GPIO_MODE_OUT, // TODO or NULL or GPIO_MODE_IN?
-	 .gpio = 36,
-	 },
-	 */
+	{
+		.devAttr = {
+			.attr = {
+				.name = "dt4",
+				.mode = 0660,
+			},
+			.show = devAttrGpio_show,
+			.store = devAttrGpio_store,
+		},
+		.gpioMode = 0,
+		.gpio = GPIO_DT4,
+	},
 
 	{ }
 };
@@ -1485,31 +1502,11 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 	{ }
 };
 
-static struct DeviceAttrBean devAttrBeansSysPwr[] = {
+static struct DeviceAttrBean devAttrBeansPwrIn[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "enabled",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 144,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0xffff,
-			.shift = 0,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "mains_v",
+				.name = "mon_v",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -1529,7 +1526,7 @@ static struct DeviceAttrBean devAttrBeansSysPwr[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "mains_i",
+				.name = "mon_i",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -1546,90 +1543,11 @@ static struct DeviceAttrBean devAttrBeansSysPwr[] = {
 		},
 	},
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "battery_v",
-				.mode = 0440,
-			},
-			.show = devAttrI2c_show,
-			.store = NULL,
-		},
-		.regSpecs = {
-			.reg = 147,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0xffff,
-			.shift = 0,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "battery_i",
-				.mode = 0440,
-			},
-			.show = devAttrI2c_show,
-			.store = NULL,
-		},
-		.regSpecs = {
-			.reg = 148,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0xffff,
-			.shift = 0,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "vso_v",
-				.mode = 0440,
-			},
-			.show = devAttrI2c_show,
-			.store = NULL,
-		},
-		.regSpecs = {
-			.reg = 149,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0xffff,
-			.shift = 0,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "vso_i",
-				.mode = 0440,
-			},
-			.show = devAttrI2c_show,
-			.store = NULL,
-		},
-		.regSpecs = {
-			.reg = 150,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0xffff,
-			.shift = 0,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
 	{ }
 };
 
 static struct DeviceAttrBean devAttrBeansSysTemp[] = {
+	// TODO remove 'enabled' attribute in release version
 	{
 		.devAttr = {
 			.attr = {
@@ -1653,7 +1571,7 @@ static struct DeviceAttrBean devAttrBeansSysTemp[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "temp_u9",
+				.name = "u9",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -1673,7 +1591,7 @@ static struct DeviceAttrBean devAttrBeansSysTemp[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "temp_u38",
+				.name = "u38",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -1990,7 +1908,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 			.mask = 0b1111,
 			.shift = 1,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_UPS_BATTERY_TYPE,
 		},
 	},
 
@@ -2037,7 +1955,7 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "battery_current_max",
+				.name = "battery_i_max",
 				.mode = 0660,
 			},
 			.show = devAttrI2c_show,
@@ -2128,6 +2046,46 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1111,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "charger_mon_v",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecs = {
+			.reg = 147,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "charger_mon_i",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecs = {
+			.reg = 148,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
 			.shift = 0,
 			.sign = false,
 			.vals = NULL,
@@ -2484,14 +2442,74 @@ static struct DeviceAttrBean devAttrBeansPowerOut[] = {
 		},
 	},
 
-	{ }
-};
-
-static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "fan_always_on",
+				.name = "vso_mon_v",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecs = {
+			.reg = 149,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "vso_mon_i",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecs = {
+			.reg = 150,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "5vo",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 137,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 1,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{ }
+};
+
+static struct DeviceAttrBean devAttrBeansFan[] = {
+	{
+		.devAttr = {
+			.attr = {
+				.name = "always_on",
 				.mode = 0660,
 			},
 			.show = devAttrI2c_show,
@@ -2511,47 +2529,31 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "v5o",
-				.mode = 0660,
+				.name = "status",
+				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.store = NULL,
 		},
 		.regSpecs = {
-			.reg = 137,
+			.reg = 140,
 			.len = 2,
 			.maskedReg = false,
 			.mask = 0b1,
-			.shift = 1,
+			.shift = 0,
 			.sign = false,
 			.vals = NULL,
 		},
 	},
 
-	{
-		.devAttr = {
-			.attr = {
-				.name = "exp_v5",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 137,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 2,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
+	{ }
+};
 
+static struct DeviceAttrBean devAttrBeansExpBus[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "exp_enabled",
+				.name = "enabled",
 				.mode = 0660,
 			},
 			.show = devAttrI2c_show,
@@ -2568,6 +2570,50 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 		},
 	},
 
+	{
+		.devAttr = {
+			.attr = {
+				.name = "aux",
+				.mode = 0440,
+			},
+			.show = devAttrI2c_show,
+			.store = NULL,
+		},
+		.regSpecs = {
+			.reg = 140,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 3,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "5vx",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 137,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 2,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{ }
+};
+
+static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
@@ -2671,7 +2717,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "v5o_err",
+				.name = "5vo_err",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -2691,7 +2737,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "exp_err",
+				.name = "expbus_err",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -2711,7 +2757,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "exp_aux",
+				.name = "expbus_aux",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -2871,7 +2917,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "temp_err",
+				.name = "sys_temp_err",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -3245,8 +3291,8 @@ static struct DeviceBean devices[] = {
 	},
 
 	{
-		.name = "sys_pwr",
-		.devAttrBeans = devAttrBeansSysPwr,
+		.name = "power_in",
+		.devAttrBeans = devAttrBeansPwrIn,
 	},
 
 	{
@@ -3277,6 +3323,16 @@ static struct DeviceBean devices[] = {
 	{
 		.name = "usb",
 		.devAttrBeans = devAttrBeansUsb,
+	},
+
+	{
+		.name = "fan",
+		.devAttrBeans = devAttrBeansFan,
+	},
+
+	{
+		.name = "expbus",
+		.devAttrBeans = devAttrBeansExpBus,
 	},
 
 	{
@@ -3315,23 +3371,53 @@ static char toUpper(char c) {
 	return c;
 }
 
-static struct DeviceAttrBean* devAttrGetBean(struct device* dev,
-		struct device_attribute* attr) {
-	int di, ai;
+static int gpioSetup(struct DeviceBean* db, struct DeviceAttrBean* dab) {
+	int result = 0;
+	char gpioReqName[128];
+	char *gpioReqNamePart;
+
+	strcpy(gpioReqName, "ionopimax_");
+	gpioReqNamePart = gpioReqName + strlen("ionopimax_");
+
+	strcpy(gpioReqNamePart, db->name);
+	gpioReqNamePart[strlen(db->name)] = '_';
+
+	strcpy(gpioReqNamePart + strlen(db->name) + 1, dab->devAttr.attr.name);
+
+	gpio_request(dab->gpio, gpioReqName);
+	if (dab->gpioMode == GPIO_MODE_OUT) {
+		result = gpio_direction_output(dab->gpio, false);
+	} else if (dab->gpioMode == GPIO_MODE_IN) {
+		result = gpio_direction_input(dab->gpio);
+	}
+
+	return result;
+}
+
+static struct DeviceBean* devGetBean(struct device* dev) {
+	int di;
 	di = 0;
 	while (devices[di].name != NULL) {
 		if (dev == devices[di].pDevice) {
-			ai = 0;
-			while (devices[di].devAttrBeans[ai].devAttr.attr.name != NULL) {
-				if (attr == &devices[di].devAttrBeans[ai].devAttr) {
-					return &devices[di].devAttrBeans[ai];
-					break;
-				}
-				ai++;
-			}
-			break;
+			return &devices[di];
 		}
 		di++;
+	}
+	return NULL;
+}
+
+static struct DeviceAttrBean* devAttrGetBean(struct DeviceBean* devBean,
+		struct device_attribute* attr) {
+	int ai;
+	if (devBean == NULL) {
+		return NULL;
+	}
+	ai = 0;
+	while (devBean->devAttrBeans[ai].devAttr.attr.name != NULL) {
+		if (attr == &devBean->devAttrBeans[ai].devAttr) {
+			return &devBean->devAttrBeans[ai];
+		}
+		ai++;
 	}
 	return NULL;
 }
@@ -3340,12 +3426,12 @@ static ssize_t devAttrGpio_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int val;
 	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(dev, attr);
-	if (dab == NULL || dab->gpioMode == 0) {
+	dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL || dab->gpio < 0) {
 		return -EFAULT;
 	}
-	if (dab->gpio < 0) {
-		return -EFAULT;
+	if (dab->gpioMode != GPIO_MODE_IN && dab->gpioMode != GPIO_MODE_OUT) {
+		return -EPERM;
 	}
 	val = gpio_get_value(dab->gpio);
 	if (dab->invert) {
@@ -3358,12 +3444,12 @@ static ssize_t devAttrGpio_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count) {
 	bool val;
 	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(dev, attr);
-	if (dab == NULL || dab->gpioMode == 0) {
+	dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL || dab->gpio < 0) {
 		return -EFAULT;
 	}
-	if (dab->gpio < 0) {
-		return -EFAULT;
+	if (dab->gpioMode != GPIO_MODE_OUT) {
+		return -EPERM;
 	}
 	if (kstrtobool(buf, &val) < 0) {
 		if (toUpper(buf[0]) == 'E') { // Enable
@@ -3392,7 +3478,7 @@ static ssize_t devAttrGpioBlink_store(struct device* dev,
 	long off = 0;
 	long rep = 1;
 	char *end = NULL;
-	dab = devAttrGetBean(dev, attr);
+	dab = devAttrGetBean(devGetBean(dev), attr);
 	if (dab == NULL || dab->gpioMode == 0) {
 		return -EFAULT;
 	}
@@ -3422,14 +3508,98 @@ static ssize_t devAttrGpioBlink_store(struct device* dev,
 	return count;
 }
 
+static ssize_t devAttrDtMode_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	struct DeviceAttrBean* dab;
+	dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL || dab->gpio < 0) {
+		return -EFAULT;
+	}
+	if (dab->gpioMode == GPIO_MODE_IN) {
+		return sprintf(buf, "in\n");
+	}
+	if (dab->gpioMode == GPIO_MODE_OUT) {
+		return sprintf(buf, "out\n");
+	}
+	return sprintf(buf, "x\n");
+}
+
+static ssize_t devAttrDtMode_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	size_t ret;
+	int ai;
+	bool* enabled;
+	struct DeviceBean* db;
+	struct DeviceAttrBean* dab;
+	db = devGetBean(dev);
+	dab = devAttrGetBean(db, attr);
+	if (dab == NULL) {
+		return -EFAULT;
+	}
+
+	if (dab->gpio == GPIO_DT1) {
+		if (w1.enabled) {
+			return -EBUSY;
+		}
+		enabled = &dt1enabled;
+	} else if (dab->gpio == GPIO_DT2) {
+		if (w1.enabled) {
+			return -EBUSY;
+		}
+		enabled = &dt2enabled;
+	} else if (dab->gpio == GPIO_DT3) {
+		if (w2.enabled) {
+			return -EBUSY;
+		}
+		enabled = &dt3enabled;
+	} else if (dab->gpio == GPIO_DT4) {
+		if (w2.enabled) {
+			return -EBUSY;
+		}
+		enabled = &dt4enabled;
+	} else {
+		return -EFAULT;
+	}
+
+	if (toUpper(buf[0]) == 'I') {
+		dab->gpioMode = GPIO_MODE_IN;
+	} else if (toUpper(buf[0]) == 'O') {
+		dab->gpioMode = GPIO_MODE_OUT;
+	} else {
+		dab->gpioMode = 0;
+	}
+
+	ret = count;
+	gpio_free(dab->gpio);
+	if (dab->gpioMode != 0) {
+		(*enabled) = true;
+		if (gpioSetup(db, dab)) {
+			dab->gpioMode = 0;
+			gpio_free(dab->gpio);
+			ret = -EFAULT;
+		}
+	} else {
+		(*enabled) = false;
+	}
+
+	ai = 0;
+	while (db->devAttrBeans[ai].devAttr.attr.name != NULL) {
+		if (db->devAttrBeans[ai].gpio == dab->gpio) {
+			db->devAttrBeans[ai].gpioMode = dab->gpioMode;
+		}
+		ai++;
+	}
+
+	return ret;
+}
+
 static bool ionopimax_i2c_lock(void) {
 	uint8_t i;
+	struct ionopimax_i2c_data *data;
 	if (!ionopimax_i2c_client) {
 		return false;
 	}
-
-	struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
-
+	data = i2c_get_clientdata(ionopimax_i2c_client);
 	for (i = 0; i < 20; i++) {
 		if (mutex_trylock(&data->update_lock)) {
 			return true;
@@ -3440,8 +3610,9 @@ static bool ionopimax_i2c_lock(void) {
 }
 
 static void ionopimax_i2c_unlock(void) {
+	struct ionopimax_i2c_data *data;
 	if (ionopimax_i2c_client) {
-		struct ionopimax_i2c_data *data = i2c_get_clientdata(ionopimax_i2c_client);
+		data = i2c_get_clientdata(ionopimax_i2c_client);
 		mutex_unlock(&data->update_lock);
 	}
 }
@@ -3599,7 +3770,7 @@ static ssize_t devAttrI2c_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t res;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(dev, attr);
+	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -3646,7 +3817,7 @@ static ssize_t devAttrI2c_store(struct device* dev,
 	int32_t res;
 	char valC;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(dev, attr);
+	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -3694,7 +3865,7 @@ static ssize_t devAttrI2c_store(struct device* dev,
 static struct WiegandBean* getWiegandBean(struct device* dev,
 		struct device_attribute* attr) {
 	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(dev, attr);
+	dab = devAttrGetBean(devGetBean(dev), attr);
 	if (dab->devAttr.attr.name[1] == '1') {
 		return &w1;
 	} else {
@@ -3843,19 +4014,21 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 }
 
 static void wiegandDisable(struct WiegandBean* w) {
-	w->enabled = false;
+	if (w->enabled) {
+		gpio_free(w->d0.gpio);
+		gpio_free(w->d1.gpio);
 
-	gpio_free(w->d0.gpio);
-	gpio_free(w->d1.gpio);
+		if (w->d0.irqRequested) {
+			free_irq(w->d0.irq, NULL);
+			w->d0.irqRequested = false;
+		}
 
-	if (w->d0.irqRequested) {
-		free_irq(w->d0.irq, NULL);
-		w->d0.irqRequested = false;
-	}
+		if (w->d1.irqRequested) {
+			free_irq(w->d1.irq, NULL);
+			w->d1.irqRequested = false;
+		}
 
-	if (w->d1.irqRequested) {
-		free_irq(w->d1.irq, NULL);
-		w->d1.irqRequested = false;
+		w->enabled = false;
 	}
 }
 
@@ -3880,8 +4053,14 @@ static ssize_t devAttrWiegandEnabled_store(struct device* dev,
 	if (enable) {
 		isW1 = w == &w1;
 		if (isW1) {
+			if (dt1enabled || dt2enabled) {
+				return -EBUSY;
+			}
 			reqName[11] = '1';
 		} else {
+			if (dt3enabled || dt4enabled) {
+				return -EBUSY;
+			}
 			reqName[11] = '2';
 		}
 
@@ -3966,8 +4145,6 @@ static ssize_t devAttrWiegandData_show(struct device* dev,
 		return -EBUSY;
 	}
 
-	w->noise = 0;
-
 	return sprintf(buf, "%lu %d %llu\n", to_usec(&w->lastBitTs), w->bitCount,
 			w->data);
 }
@@ -3975,9 +4152,13 @@ static ssize_t devAttrWiegandData_show(struct device* dev,
 static ssize_t devAttrWiegandNoise_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	struct WiegandBean* w;
+	int noise;
 	w = getWiegandBean(dev, attr);
+	noise = w->noise;
 
-	return sprintf(buf, "%d\n", w->noise);
+	w->noise = 0;
+
+	return sprintf(buf, "%d\n", noise);
 }
 
 static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
@@ -4259,16 +4440,10 @@ static void cleanup(void) {
 }
 
 static int __init ionopimax_init(void) {
-	struct i2c_adapter* i2cAdapter1;
-	char gpioReqName[256];
-	char *gpioReqNamePart;
 	int result = 0;
 	int di, ai;
 
 	printk(KERN_INFO "ionopimax: - | init\n");
-
-	strcpy(gpioReqName, "ionopimax_");
-	gpioReqNamePart = gpioReqName + strlen("ionopimax_");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
 
@@ -4300,20 +4475,7 @@ static int __init ionopimax_init(void) {
 				goto fail;
 			}
 			if (devices[di].devAttrBeans[ai].gpioMode != 0) {
-				strcpy(gpioReqNamePart, devices[di].name);
-				gpioReqNamePart[strlen(devices[di].name)] = '_';
-
-				strcpy(gpioReqNamePart + strlen(devices[di].name) + 1,
-						devices[di].devAttrBeans[ai].devAttr.attr.name);
-
-				gpio_request(devices[di].devAttrBeans[ai].gpio, gpioReqName);
-				if (devices[di].devAttrBeans[ai].gpioMode == GPIO_MODE_OUT) {
-					result = gpio_direction_output(
-							devices[di].devAttrBeans[ai].gpio, false);
-				} else {
-					result = gpio_direction_input(
-							devices[di].devAttrBeans[ai].gpio);
-				}
+				result = gpioSetup(&devices[di], &devices[di].devAttrBeans[ai]);
 				if (result) {
 					printk(
 					KERN_ALERT "ionopimax: * | error setting up GPIO %d\n",

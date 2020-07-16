@@ -76,7 +76,14 @@ You can read and/or write to these files to configure, monitor and control your 
 
 The values of the configuration files marked with * can be permanently saved in the Iono Pi Max controller using the `/mcu/config` file.
 If not permanently saved, the parameters will be reset to the original factory defaults, or to
-the previously saved user configuration, after every power cycle of the Raspberry Pi.
+the previously saved user configuration, after a power cycle.
+
+### Button - `/sys/class/ionopimax/button/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|status|R|0|Button released|
+|status|R|1|Button pressed|
 
 ### Buzzer - `/sys/class/ionopimax/buzzer/`
 
@@ -88,11 +95,111 @@ the previously saved user configuration, after every power cycle of the Raspberr
 |beep|W|&lt;t&gt;|Buzzer on for &lt;t&gt; ms|
 |beep|W|&lt;t_on&gt; &lt;t_off&gt; &lt;rep&gt;|Buzzer beep &lt;rep&gt; times with &lt;t_on&gt;/&lt;t_off&gt; ms periods. E.g. "200 50 3"|
 
-Examples:
+### LED - `/sys/class/ionopimax/led/`
 
-    cat /sys/class/ionopimax/buzzer/status
-    echo F > /sys/class/ionopimax/buzzer/status
-    echo 200 50 3 > /sys/class/ionopimax/buzzer/beep
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|l&lt;n&gt;_r|R/W|&lt;val&gt;|Value (0 - 255) of red channel of RGB LED number &lt;n&gt; (1 - 5)|
+|l&lt;n&gt;_g|R/W|&lt;val&gt;|Value (0 - 255) of green channel of RGB LED number &lt;n&gt; (1 - 5)|
+|l&lt;n&gt;_b|R/W|&lt;val&gt;|Value (0 - 255) of blue channel of RGB LED number &lt;n&gt; (1 - 5)|
+|l&lt;n&gt;_br|R/W|&lt;val&gt;|Brightness value (0 - 255) of RGB LED number &lt;n&gt; (1 - 5)|
+
+### Digital Inputs - `/sys/class/ionopimax/digital_in/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|di&lt;n&gt;|R|0|Digital input (DI) &lt;n&gt; (1 - 4) low|
+|di&lt;n&gt;|R|1|Digital input (DI) &lt;n&gt; (1 - 4) high|
+
+### Digital Outputs - `/sys/class/ionopimax/digital_out/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|o&lt;n&gt;|R/W|0|Relay (O) &lt;n&gt; (1 - 4) open|
+|o&lt;n&gt;|R/W|1|Relay (O) &lt;n&gt; (1 - 4) closed|
+|o&lt;n&gt;|R|F|Relay (O) &lt;n&gt; (1 - 4) fault open|
+|o&lt;n&gt;|R|S|Relay (O) &lt;n&gt; (1 - 4) short circuit|
+|oc&lt;n&gt;|R/W|0|Open collector (OC) &lt;n&gt; (1 - 4) open|
+|oc&lt;n&gt;|R/W|1|Open collector (OC) &lt;n&gt; (1 - 4) closed|
+|oc&lt;n&gt;|R|F|Open collector (OC) &lt;n&gt; (1 - 4) fault open|
+|oc&lt;n&gt;|R|S|Open collector (OC) &lt;n&gt; (1 - 4) short circuit|
+
+### Digital I/O DTx - `/sys/class/ionopimax/digital_io/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|dt&lt;n&gt;_mode|R/W|x|DT &lt;n&gt; (1 - 4) line not controlled by kernel module|
+|dt&lt;n&gt;_mode|R/W|in|DT &lt;n&gt; (1 - 4) line set as input|
+|dt&lt;n&gt;_mode|R/W|out|DT &lt;n&gt; (1 - 4) line set as output|
+|dt&lt;n&gt;|R(/W)|0|DT &lt;n&gt; (1 - 4) line low. Writable only in output mode|
+|dt&lt;n&gt;|R(/W)|1|DT &lt;n&gt; (1 - 4) line high. Writable only in output mode|
+
+### Analog Inputs - `/sys/class/ionopimax/analog_in/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|enabled|R/W|0|Analog converter disabled (power off)|
+|enabled|R/W|1|Analog converter enabled|
+|hsf|R/W|0|High speed filter for AV/AI inputs disabled|
+|hsf|R/W|1|High speed filter for AV/AI inputs enabled|
+|av&lt;n&gt;_mode|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - XXV)|
+|av&lt;n&gt;_mode|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -YYV - XXV)|
+|av&lt;n&gt;|R|&lt;val&gt;|AV &lt;n&gt; (1 - 4) voltage value in mV/100|
+|ai&lt;n&gt;_mode|R/W|U|AI &lt;n&gt; (1 - 4) unipolar mode (range 0mA - XXmA)|
+|ai&lt;n&gt;_mode|R/W|B|AI &lt;n&gt; (1 - 4) bipolar mode (range -YYmA - XXmA)|
+|ai&lt;n&gt;|R|&lt;val&gt;|AI &lt;n&gt; (1 - 4) current value in &micro;A|
+|at&lt;n&gt;_mode|R/W|0|AT &lt;n&gt; (1 - 2) disabled|
+|at&lt;n&gt;_mode|R/W|1|AT &lt;n&gt; (1 - 2) enabled as PT100 sensor input|
+|at&lt;n&gt;_mode|R/W|2|AT &lt;n&gt; (1 - 2) enabled as PT1000 sensor input|
+|at&lt;n&gt;|R|&lt;val&gt;|AT &lt;n&gt; (1 - 2) temperature value in &deg;C/100|
+
+### Analog Outputs - `/sys/class/ionopimax/analog_out/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|ao&lt;n&gt;_enabled|R/W|0|Analog output (AO) &lt;n&gt; disabled|
+|ao&lt;n&gt;_enabled|R/W|1|Analog output (AO) &lt;n&gt; enabled|
+|ao&lt;n&gt;_mode|R/W|I|Analog output (AO) &lt;n&gt; current mode|
+|ao&lt;n&gt;_mode|R/W|V|Analog output (AO) &lt;n&gt; voltage mode|
+|ao&lt;n&gt;|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode) or &micro;A (current mode)|
+|ao&lt;n&gt;_err|R|&lt;err&gt;|Analog output (AO) &lt;n&gt; errors register value. Bit 0 (LSB) set to 1 indicates an over-temperature error, bit 1 a load error, and bit 2 (MSB) a common mode error|
+
+### Power Outputs - `/sys/class/ionopimax/power_out/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|vso_enabled|R/W|0|VSO output disabled|
+|vso_enabled|R/W|1|VSO output enabled|
+|vso|R/W|&lt;val&gt;|VSO voltage value in mV (11500 - 24500)|
+|vso_mon_v|R|&lt;val&gt;|Actual voltage measured on VSO, in mV|
+|vso_mon_i|R|&lt;val&gt;|Current drain measured on VSO, in mA|
+|5vo|R/W|0|5VO output disabled|
+|5vo|R/W|1|5VO output enabled|
+
+### Wiegand - `/sys/class/ionopimax/wiegand/`
+
+You can use the TTL lines as Wiegand interfaces for keypads or card readers. You can connect up to two Wiegand devices using DT1/DT2 respctively fot the D0/D1 lines of the first device (w1) and DT3/DT4 for D0/D1 of the second device (w2).
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|w&lt;N&gt;_enabled|R/W|0|Wiegand interface w&lt;N&gt; disabled|
+|w&lt;N&gt;_enabled|R/W|1|Wiegand interface w&lt;N&gt; enabled|
+|w&lt;N&gt;_data|R|&lt;ts&gt; &lt;bits&gt; &lt;data&gt;|Latest data read from wiegand interface w&lt;N&gt;. The first number (&lt;ts&gt;) represents an internal timestamp of the received data, it shall be used only to discern newly available data from the previous one. &lt;bits&gt; reports the number of bits received (max 64). &lt;data&gt; is the sequence of bits received represnted as unsigned integer|
+
+The following properties can be used to improve noise detection and filtering. The w&lt;N&gt;_noise property reports the latest event and is reset to 0 after being read.
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|w&lt;N&gt;_pulse_width_max|R/W|&lt;val&gt;|Maximum bit pulse width accepted, in &micro;s|
+|w&lt;N&gt;_pulse_width_min|R/W|&lt;val&gt;|Minimum bit pulse width accepted, in &micro;s|
+|w&lt;N&gt;_pulse_itvl_max|R/W|&lt;val&gt;|Maximum interval between pulses accepted, in &micro;s|
+|w&lt;N&gt;_pulse_itvl_min|R/W|&lt;val&gt;|Minimum interval between pulses accepted, in &micro;s|
+|w&lt;N&gt;_noise|R|0|No noise|
+|w&lt;N&gt;_noise|R|10|Fast pulses on lines|
+|w&lt;N&gt;_noise|R|11|Pulses interval too short|
+|w&lt;N&gt;_noise|R|12/13|Concurrent movement on both D0/D1 lines|
+|w&lt;N&gt;_noise|R|14|Pulse too short|
+|w&lt;N&gt;_noise|R|15|Pulse too long|
 
 ### Watchdog - `/sys/class/ionopimax/watchdog/`
 
@@ -106,167 +213,149 @@ Examples:
 |heartbeat|W|0|Set watchdog heartbeat line low|
 |heartbeat|W|1|Set watchdog heartbeat line high|
 |heartbeat|W|F|Flip watchdog heartbeat state|
-|enable_mode*|R/W|D|MCU config XWED - Watchdog normally disabled (factory default)|
-|enable_mode*|R/W|A|MCU config XWEA - Watchdog always enabled|
-|timeout*|R/W|&lt;t&gt;|MCU config XWH&lt;t&gt; - Watchdog heartbeat timeout, in seconds (1 - 99999). Factory default: 60|
-|down_delay*|R/W|&lt;t&gt;|MCU config XWW&lt;t&gt; - Forced shutdown delay from the moment the timeout is expired and the shutdown cycle has not been enabled, in seconds (1 - 99999). Factory default: 60|
-|sd_switch|R/W|&lt;n&gt;|MCU config XWSD&lt;n&gt; (n &gt; 0) - Switch boot from SDA/SDB after &lt;n&gt; consecutive watchdog resets, if no heartbeat is detected. A value of n > 1 can be used with /enable_mode set to A only; if /enable_mode is set to D, then /sd_switch is set automatically to 1|
-|sd_switch|R/W|0|MCU config XWSD0 - SD switch on watchdog reset disabled (factory default)|
+|enable_mode*|R/W|D|Watchdog normally disabled (factory default)|
+|enable_mode*|R/W|A|Watchdog always enabled (ignores /enabled value)|
+|timeout*|R/W|&lt;t&gt;|Watchdog heartbeat timeout, in seconds (1 - 65535). Factory default: 60|
+|down_delay*|R/W|&lt;t&gt;|Forced shutdown delay from the moment the timeout is expired and the shutdown cycle has not been enabled, in seconds (1 - 65535). Factory default: 60|
+|sd_switch*|R/W|&lt;n&gt;|Switch boot from SDA/SDB after &lt;n&gt; consecutive watchdog resets, if no heartbeat is detected. A value of n > 1 can be used with /enable_mode set to A only; if /enable_mode is set to D, then /sd_switch is set automatically to 1|
+|sd_switch*|R/W|0|SD switch on watchdog reset disabled (factory default)|
 
-### Power - `/sys/class/stratopi/power/`
+### Power - `/sys/class/ionopimax/power/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
 |down_enabled|R/W|0|Delayed shutdown cycle disabled|
 |down_enabled|R/W|1|Delayed shutdown cycle enabled|
-|down_delay*|R/W|&lt;t&gt;|MCU config XPW&lt;t&gt; - Shutdown delay from the moment it is enabled, in seconds (1 - 99999). Factory default: 60|
-|off_time*|R/W|&lt;t&gt;|MCU config XPO&lt;t&gt; - Duration of power-off, in seconds (1 - 99999). Factory default: 5|
-|up_delay*|R/W|&lt;t&gt;|MCU config XPU&lt;t&gt; - Power-up delay after main power is restored, in seconds (0 - 99999). Factory default: 0|
-|down_enable_mode*|R/W|I|MCU config XPEI - Immediate (factory default): when shutdown is enabled, Strato Pi will immediately initiate the power-cycle, i.e. wait for the time specified in /down_delay and then power off the Pi board for the time specified in /off_time|
-|down_enable_mode*|R/W|A|MCU config XPEA - Arm: enabling shutdown will arm the shutdown procedure, but will not start the power-cycle until the shutdown enable line goes low again (i.e. shutdown disabled or Raspberry Pi switched off). After the line goes low, Strato Pi will initiate the power-cycle|
-|up_mode*|R/W|A|MCU config XPPA - Always: if shutdown is enabled when the main power is not present, only the Raspberry Pi is turned off, and the power is always restored after the power-off time, even if running on battery, with no main power present|
-|up_mode*|R/W|M|MCU config XPPM - Main power (factory default): if shutdown is enabled when the main power is not present, the Raspberry Pi and the Strato Pi UPS board are powered down after the shutdown wait time, and powered up again only when the main power is restored|
-|sd_switch|R/W|1|MCU config XPSD1 - Switch boot from SDA/SDB at every power-cycle|
-|sd_switch|R/W|0|MCU config XPSD0 - SD switch at power-cycle disabled (factory default)|
+|down_delay*|R/W|&lt;t&gt;|Shutdown delay from the moment it is enabled, in seconds (1 - 65535). Factory default: 60|
+|off_time*|R/W|&lt;t&gt;|Duration of power-off, in seconds (1 - 65535). Factory default: 5|
+|up_delay*|R/W|&lt;t&gt;|Power-up delay after main power is restored, in seconds (0 - 65535). Factory default: 0|
+|down_enable_mode*|R/W|I|Immediate (factory default): when shutdown is enabled, Iono will immediately initiate the power-cycle, i.e. wait for the time specified in /down_delay and then power off the Pi board for the time specified in /off_time|
+|down_enable_mode*|R/W|A|Arm: enabling shutdown will arm the shutdown procedure, but will not start the power-cycle until the shutdown enable line goes low again (i.e. shutdown disabled or Raspberry Pi switched off). After the line goes low, Iono will initiate the power-cycle|
+|up_mode*|R/W|A|Always: if shutdown is enabled when the main power is not present, only the Raspberry Pi is turned off, and the power is always restored after the power-off time, even if running on battery, with no main power present|
+|up_mode*|R/W|M|Main power (factory default): if shutdown is enabled when the main power is not present, Iono is fully powered down after the shutdown wait time, and powered up again only when the main power is restored|
+|sd_switch|R/W|1|Switch boot from SDA/SDB at every power-cycle|
+|sd_switch|R/W|0|SD switch at power-cycle disabled (factory default)|
 
-### RS-485 Config - `/sys/class/stratopi/rs485/`
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|mode*|R/W|A|MCU config XSMA - Automatic (factory default): TX/RX switching is done automatically, based on speed and number of bits detection|
-|mode*|R/W|P|MCU config XSMP - Passive: TX/RX switching is not actively controlled by Strato Pi|
-|mode*|R/W|F|MCU config XSMF - Fixed: TX/RX switching is based on speed, number of bits, parity and number ofstop bits set in /params|
-|params*|R/W|&lt;rbps&gt;|MCU config XSP&lt;rbps&gt; - Set RS-485 communication parameters: baud rate (r), number of bits (b), parity (p) and number of stop bits (s) for fixed mode, see below tables|
-
-|Baud rate (r) value|Description|
-|---------------|-----------|
-|2|1200 bps|
-|3|2400 bps|
-|4|4800 bps|
-|5|9600 bps (factory default)|
-|6|19200 bps|
-|7|38400 bps|
-|8|57600 bps|
-|9|115200 bps|
-
-|Bits (b) value|Description|
-|---------------|-----------|
-|7|7 bit|
-|8|8 bit (factory default)|
-
-
-|Parity (p) value|Description|
-|---------------|-----------|
-|N|No parity (factory default)|
-|E|Even parity|
-|O|Odd parity|
-
-
-|Stop bits (s) value|Description|
-|---------------|-----------|
-|1|1 stop bit (factory default)|
-|2|2 stop bits|
-
-### UPS - `/sys/class/stratopi/ups/`
+### UPS - `/sys/class/ionopimax/ups/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
+|enabled|R/W|0|UPS disabled|
+|enabled|R/W|1|UPS enabled|
 |battery|R|0|Running on main power|
 |battery|R|1|Running on battery power|
-|power_delay*|R/W|&lt;t&gt;|MCU config XUB&lt;t&gt; - UPS automatic power-cycle timeout, in seconds (0 - 99999). Strato Pi UPS will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
+|status|R|0|UPS status: idle|
+|status|R|1|UPS status: detecting battery|
+|status|R|2|UPS status: battery disconnected|
+|status|R|4|UPS status: charging battery|
+|status|R|5|UPS status: battery charged|
+|status|R|6|UPS status: battery in use|
+|status|R|8|UPS status: battery overvoltage error|
+|status|R|9|UPS status: battery undervoltage error|
+|status|R|10|UPS status: charger damaged|
+|status|R|11|UPS status: unstable|
+|battery_charge|R|&lt;n&gt;|Estimated battery charge percentage|
+|battery_type|R/W|P|Lead battery (default)|
+|battery_type|R/W|N|NiMH battery|
+|battery_cells|R/W|&lt;n&gt;|(For MiMH batterY type) number of battery cells (7 - 10). Default: 6|
+|battery_capacity|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Default: 800|
+|battery_i_max|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Default: 0|
+|charger_mon_v|R|&lt;val&gt;|Voltage measured on battery charger output, in mV|
+|charger_mon_i|R|&lt;val&gt;|Current drain measured on battery charger output, in mA|
+|power_delay*|R/W|&lt;t&gt;|UPS automatic power-cycle timeout, in seconds (0 - 65535). Iono will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
 
-### Relay - `/sys/class/stratopi/relay/`
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|status|R/W|0|Relay open|
-|status|R/W|1|Relay closed|
-|status|W|F|Flip relay's state|
-
-### LED - `/sys/class/stratopi/led/`
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|status|R/W|0|LED off|
-|status|R/W|1|LED on|
-|status|W|F|Flip LED's state|
-|blink|W|&lt;t&gt;|LED on for &lt;t&gt; ms|
-|blink|W|&lt;t_on&gt; &lt;t_off&gt; &lt;rep&gt;|LED blink &lt;rep&gt; times with &lt;t_on&gt;/&lt;t_off&gt; ms periods. E.g. "200 50 3"|
-
-### Button - `/sys/class/stratopi/button/`
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|status|R|0|Button released|
-|status|R|1|Button pressed|
-
-### Expansion Bus - `/sys/class/stratopi/expbus/`
+### Power Supply Input - `/sys/class/ionopimax/power_in/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|enabled|R/W|0|Expansion Bus enabled|
-|enabled|R/W|1|Expansion Bus disabled|
-|aux|R|0|Expansion Bus auxiliary line low|
-|aux|R|1|Expansion Bus auxiliary line high|
+|mon_v|R|&lt;val&gt;|Voltage measured on power supply input, in mV|
+|mon_i|R|&lt;val&gt;|Current drain measured on power supply input, in mA|
 
-### SD - `/sys/class/stratopi/sd/`
+### SD - `/sys/class/ionopimax/sd/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|sdx_enabled*|R/W|1|MCU config XSD01 - SDX bus enabled (factory default)|
-|sdx_enabled*|R/W|0|MCU config XSD00 - SDX bus disabled|
-|sd1_enabled*|R/W|1|MCU config XSD11 - SD1 bus enabled|
-|sd1_enabled*|R/W|0|MCU config XSD10 - SD1 bus disabled (factory default)|
-|sdx_default|R/W|A|MCU config XSDPA - At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
-|sdx_default|R/W|B|MCU config XSDPB - At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
-|sdx_routing|R/W|A|MCU config XSDRA - SDX bus routed to SDA and SD1 bus to SDB (factory default)|
-|sdx_routing|R/W|B|MCU config XSDRB - SDX bus routed to SDB and SD1 bus to SDA|
+|sdx_enabled*|R/W|1|SDX bus enabled (factory default)|
+|sdx_enabled*|R/W|0|SDX bus disabled|
+|sd1_enabled*|R/W|1|SD1 bus enabled|
+|sd1_enabled*|R/W|0|SD1 bus disabled (factory default)|
+|sdx_default|R/W|A|At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
+|sdx_default|R/W|B|At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
+|sdx_routing|R/W|A|SDX bus routed to SDA and SD1 bus to SDB (factory default)|
+|sdx_routing|R/W|B|SDX bus routed to SDB and SD1 bus to SDA|
 
-### USB 1 - `/sys/class/stratopi/usb1/`
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|disabled|R/W|0|USB 1 enabled|
-|disabled|R/W|1|USB 1 disabled|
-|ok|R|0|USB 1 fault|
-|ok|R|1|USB 1 ok|
-
-### USB 2 - `/sys/class/stratopi/usb2/`
+### USB - `/sys/class/ionopimax/usb/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|disabled|R/W|0|USB 2 enabled|
-|disabled|R/W|1|USB 2 disabled|
-|ok|R|0|USB 2 fault|
-|ok|R|1|USB 2 ok|
+|usb&lt;n&gt;_enabled|R/W|0|USB &lt;n&gt; (1 or 2) disabled (power off)|
+|usb&lt;n&gt;_enabled|R/W|1|USB &lt;n&gt; (1 or 2) enabled|
+|usb&lt;n&gt;_ok|R|0|USB &lt;n&gt; (1 or 2) fault|
+|usb&lt;n&gt;_ok|R|1|USB &lt;n&gt; (1 or 2) OK|
 
-### MCU - `/sys/class/stratopi/mcu/`
+### Fan - `/sys/class/ionopimax/fan/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|config|W|S|MCU command XCCS - Persist the current configuration in the controller to be retained across power cycles|
-|config|W|R|MCU command XCCR - Restore the original factory configuration|
-|fw_version|R|&lt;m&gt;.&lt;n&gt;/&lt;mc&gt;|MCU command XFW? - Read the firmware version, &lt;m&gt; is the major version number, &lt;n&gt; is the minor version number, &lt;mc&gt; is the model code. E.g. "4.0/07"|
-|fw_install|W|<fw_file>|Set the MCU in boot-loader mode and upload the specified firmware HEX file|
-|fw_install_progress|R|&lt;p&gt;|Progress of the current firmware upload process as percentage|
+|always_on|R/W|0|The fan will activate automatically based on system state|
+|always_on|R/W|1|Fan always active|
+|status|R|0|Fan inactive|
+|status|R|1|Fan active|
 
-#### Firmware upload
+### System Temperature - `/sys/class/ionopimax/sys_temp/`
 
-The `/sys/class/stratopi/mcu/fw_install` sysfs file allows to upload a new firmware on Strato Pi's MCU. 
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|u9|R|&lt;val&gt;|Temperature value from sunsor U9, i &deg;C/100|
+|u38|R|&lt;val&gt;|Temperature value from sunsor U38, i &deg;C/100|
 
-To this end, output the content of the firmaware HEX file to `/sys/class/stratopi/mcu/fw_install` and then monitor the progress reading from `/sys/class/stratopi/mcu/fw_install_progress`. 
+### Expansion Bus - `/sys/class/ionopimax/expbus/`
 
-The MCU will be set to boot-loader mode and the firware uploaded. When the progress reaches 100% you need to disable boot-loader mode by triggering a power-cycle, which is done by setting the shutdown line low (i.e. set `/sys/class/stratopi/power/down_enabled` to 0 or switch off the Raspberry Pi).
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|enabled|R/W|0|Expansion bus disabled|
+|enabled|R/W|1|Expansion bus enabled|
+|aux|R|0|Expansion bus auxiliary line low|
+|aux|R|1|Expansion bus auxiliary line high|
+|5vx|R/W|0|Expansion bus 5V power off|
+|5vx|R/W|1|Expansion bus 5V power on|
 
-For troubleshooting or monitoring the firmware upload process check the kernel log in `/var/log/kern.log`.
+### System state - `/sys/class/ionopimax/sys_state/`
 
-Firmware upload axample:
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|status_all|R|&lt;val&gt;|System state register value. Bitmap of all the following status flag from fan_status (bit 0 - LSB) to rs485_err (bit 13)|
+|fan_status|R|0|Fan inactive|
+|fan_status|R|1|Fan active|
+|5vo_err|R|0|5VO output OK|
+|5vo_err|R|1|5VO output failure|
+|expbus_err|R|0|Expansion bus OK|
+|expbus_err|R|1|Expansion bus failure|
+|expbus_aux|R|0|Expansion bus auxiliary line low|
+|expbus_aux|R|1|Expansion bus auxiliary line high|
+|vso_prot|R|0|VSO output OK|
+|vso_prot|R|1|VSO output protection enabled. VSO temporarily disabled|
+|ao&lt;n&gt;_prot|R|0|AO &lt;n&gt; output OK|
+|ao&lt;n&gt;_prot|R|1|AO &lt;n&gt; output protection enabled. AO &lt;n&gt; temporarily disabled|
+|vso_err|R|0|VSO control OK|
+|vso_err|R|1|VSO control failure|
+|ad4112_err|R|0|Analog converter for analog inputs OK|
+|ad4112_err|R|1|Analog converter for analog inputs failure|
+|ups_err|R|0|UPS control OK|
+|ups_err|R|1|UPS control failure|
+|led_err|R|0|LEDs control OK|
+|led_err|R|1|LEDs control failure|
+|sys_temp_err|R|0|System temperature probes OK|
+|sys_temp_err|R|1|System temperature probes failure|
+|rs232_err|R|0|RS-232 interface OK|
+|rs232_err|R|1|RS-232 interface failure|
+|rs485_err|R|0|RS-485 interface OK|
+|rs485_err|R|1|RS-485 interface failure|
 
-    $ cat firmware.hex > /sys/class/stratopi/mcu/fw_install &
-    [1] 14918
-    $ cat /sys/class/stratopi/mcu/fw_install_progress
-    0
-    [...]
-    $ cat /sys/class/stratopi/mcu/fw_install_progress
-    100
-    $ sudo shutdown now 
+### MCU - `/sys/class/ionopimax/mcu/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|config|W|S|Persist the current configuration in the controller to be retained across power cycles|
+|config|W|R|Restore the original factory configuration|
+|fw_version|R|&lt;m&gt;.&lt;n&gt;|Read the firmware version, &lt;m&gt; is the major version number, &lt;n&gt; is the minor version number E.g. "1.0"|
