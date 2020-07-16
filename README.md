@@ -306,8 +306,8 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|u9|R|&lt;val&gt;|Temperature value from sunsor U9, i &deg;C/100|
-|u38|R|&lt;val&gt;|Temperature value from sunsor U38, i &deg;C/100|
+|u9|R|&lt;val&gt;|Temperature value from sensor U9, in &deg;C/100|
+|u38|R|&lt;val&gt;|Temperature value from sensor U38, in &deg;C/100|
 
 ### Expansion Bus - `/sys/class/ionopimax/expbus/`
 
@@ -324,7 +324,7 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|status_all|R|&lt;val&gt;|System state register value. Bitmap of all the following status flag from fan_status (bit 0 - LSB) to rs485_err (bit 13)|
+|status_all|R|&lt;val&gt;|System state register value. Bitmap of all the following status flags from fan_status (bit 0 - LSB) to rs485_err (bit 13)|
 |fan_status|R|0|Fan inactive|
 |fan_status|R|1|Fan active|
 |5vo_err|R|0|5VO output OK|
