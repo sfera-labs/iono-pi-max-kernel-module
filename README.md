@@ -51,7 +51,7 @@ Compile the Device Tree and install it:
 
 Add to `/boot/config.txt` the following line:
 
-    dtoverlay=ionopi
+    dtoverlay=ionopimax
 
 Optionally, to be able to use the `/sys/class/ionopimax/` files not as super user, create a new group "ionopimax" and set it as the module owner group by adding an udev rule:
 
