@@ -111,6 +111,12 @@ static ssize_t devAttrI2c_store(struct device* dev,
 static ssize_t devAttrI2c_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
+static ssize_t devAttrUpsBatteryV_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrUpsBatteryV_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
 static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
@@ -169,7 +175,6 @@ static const char VALS_POWER_UP_MODE[] = { 2, 'M', 'A' };
 static const char VALS_SD_SDX_ROUTING[] = { 2, 'A', 'B' };
 static const char VALS_ANALOG_OUTS_MODE[] = { 2, 'I', 'V' };
 static const char VALS_ANALOG_INS_MODE[] = { 2, 'U', 'B' };
-static const char VALS_UPS_BATTERY_TYPE[] = { 3, 0, 'N', 'P' };
 
 static bool dt1enabled = false;
 static bool dt2enabled = false;
@@ -1895,38 +1900,18 @@ static struct DeviceAttrBean devAttrBeansUps[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "battery_type",
+				.name = "battery_v",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrUpsBatteryV_show,
+			.store = devAttrUpsBatteryV_store,
 		},
 		.regSpecs = {
 			.reg = 43,
 			.len = 2,
 			.maskedReg = false,
-			.mask = 0b1111,
+			.mask = 0b1,
 			.shift = 1,
-			.sign = false,
-			.vals = VALS_UPS_BATTERY_TYPE,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "battery_cells",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 43,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1111,
-			.shift = 7,
 			.sign = false,
 			.vals = NULL,
 		},
@@ -3832,7 +3817,7 @@ static ssize_t devAttrI2c_store(struct device* dev,
 	if (specs->vals == NULL) {
 		ret = kstrtol(buf, 10, &val);
 		if (ret < 0) {
-			return ret;
+			return -EINVAL;
 		}
 	} else {
 		val = -1;
@@ -3859,6 +3844,45 @@ static ssize_t devAttrI2c_store(struct device* dev,
 		return res;
 	}
 
+	return count;
+}
+
+static ssize_t devAttrUpsBatteryV_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	int32_t res;
+	res = devAttrI2c_show(dev, attr, buf);
+	if (res < 0) {
+		return res;
+	}
+	if (buf[0] == '1') {
+		return sprintf(buf, "24000\n");
+	} else {
+		return sprintf(buf, "12000\n");
+	}
+}
+
+static ssize_t devAttrUpsBatteryV_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int ret;
+	long val;
+	char buf2[2];
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+	if (val == 12000) {
+		buf2[0] = '0';
+	} else if (val == 24000) {
+		buf2[0] = '1';
+	} else {
+		return -EINVAL;
+	}
+
+	buf2[1] = '\0';
+	ret = devAttrI2c_store(dev, attr, buf2, 1);
+	if (ret < 0) {
+		return ret;
+	}
 	return count;
 }
 
