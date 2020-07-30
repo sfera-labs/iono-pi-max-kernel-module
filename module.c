@@ -804,7 +804,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 8,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -824,7 +824,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 9,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -844,7 +844,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 10,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
@@ -864,7 +864,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 11,
 			.sign = false,
-			.vals = NULL,
+			.vals = VALS_ANALOG_INS_MODE,
 		},
 	},
 
