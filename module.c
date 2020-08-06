@@ -2602,66 +2602,6 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "v5iso",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 137,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 4,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "usb_en",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 137,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 5,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "sec_rtc",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 137,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 6,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
 				.name = "status_all",
 				.mode = 0440,
 			},
@@ -2954,46 +2894,6 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 			.maskedReg = false,
 			.mask = 0b1,
 			.shift = 13,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "uart_usb_err",
-				.mode = 0440,
-			},
-			.show = devAttrI2c_show,
-			.store = NULL,
-		},
-		.regSpecs = {
-			.reg = 140,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 14,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "uart_cons_err",
-				.mode = 0440,
-			},
-			.show = devAttrI2c_show,
-			.store = NULL,
-		},
-		.regSpecs = {
-			.reg = 140,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 15,
 			.sign = false,
 			.vals = NULL,
 		},
