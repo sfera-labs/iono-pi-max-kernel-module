@@ -15,6 +15,19 @@
 				compatible = "sferalabs,ionopimax";
 				reg = <0x35>;
 				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&ionopimax_di>;
+			};
+		};
+	};
+	
+	fragment@1 {
+		target = <&gpio>;
+		__overlay__ {
+			ionopimax_di: ionopimax_di {
+				brcm,pins = <16 19 20 21>;
+				brcm,function = <0>; /* in */
+				brcm,pull = <0>; /* no pull */
 			};
 		};
 	};
