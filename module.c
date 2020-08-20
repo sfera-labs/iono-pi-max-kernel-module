@@ -227,7 +227,6 @@ static struct DeviceAttrBean devAttrBeansBuzzer[] = {
 		},
 		.gpioMode = GPIO_MODE_OUT,
 		.gpio = 40,
-		.invert = true,
 	},
 
 	{
@@ -258,6 +257,7 @@ static struct DeviceAttrBean devAttrBeansButton[] = {
 		},
 		.gpioMode = GPIO_MODE_IN,
 		.gpio = 38,
+		.invert = true,
 	},
 
 	{ }
