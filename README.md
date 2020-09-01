@@ -304,8 +304,8 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|u9|R|&lt;val&gt;|Temperature value from sensor U9, in &deg;C/100|
-|u38|R|&lt;val&gt;|Temperature value from sensor U38, in &deg;C/100|
+|top|R|&lt;val&gt;|Temperature value from sensor on the top board, in &deg;C/100|
+|bottom|R|&lt;val&gt;|Temperature value from sensor on the bottom board, in &deg;C/100|
 
 ### Expansion Bus - `/sys/class/ionopimax/expbus/`
 
@@ -327,8 +327,8 @@ The following properties can be used to improve noise detection and filtering. T
 |fan_status|R|1|Fan active|
 |5vo_err|R|0|5VO output OK|
 |5vo_err|R|1|5VO output failure|
-|expbus_err|R|0|Expansion bus OK|
-|expbus_err|R|1|Expansion bus failure|
+|5vx_err|R|0|Expansion bus 5V line OK|
+|5vx_err|R|1|Expansion bus 5V line failure|
 |expbus_aux|R|0|Expansion bus auxiliary line low|
 |expbus_aux|R|1|Expansion bus auxiliary line high|
 |vso_prot|R|0|VSO output OK|
