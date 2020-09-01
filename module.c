@@ -2662,7 +2662,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "expbus_err",
+				.name = "5vx_err",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
