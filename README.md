@@ -288,8 +288,8 @@ The following properties can be used to improve noise detection and filtering. T
 |----|:---:|:-:|-----------|
 |usb&lt;n&gt;_enabled|R/W|0|USB &lt;n&gt; (1 or 2) disabled (power off)|
 |usb&lt;n&gt;_enabled|R/W|1|USB &lt;n&gt; (1 or 2) enabled|
-|usb&lt;n&gt;_ok|R|0|USB &lt;n&gt; (1 or 2) fault|
-|usb&lt;n&gt;_ok|R|1|USB &lt;n&gt; (1 or 2) OK|
+|usb&lt;n&gt;_err|R|0|USB &lt;n&gt; (1 or 2) OK|
+|usb&lt;n&gt;_err|R|1|USB &lt;n&gt; (1 or 2) fault|
 
 ### Fan - `/sys/class/ionopimax/fan/`
 

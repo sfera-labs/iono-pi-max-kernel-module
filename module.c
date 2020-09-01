@@ -2182,7 +2182,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "usb1_ok",
+				.name = "usb1_err",
 				.mode = 0440,
 			},
 			.show = devAttrGpio_show,
@@ -2190,6 +2190,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 		},
 		.gpioMode = GPIO_MODE_IN,
 		.gpio = 0,
+		.invert = true,
 	},
 
 	{
@@ -2209,7 +2210,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "usb2_ok",
+				.name = "usb2_err",
 				.mode = 0440,
 			},
 			.show = devAttrGpio_show,
@@ -2217,6 +2218,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 		},
 		.gpioMode = GPIO_MODE_IN,
 		.gpio = 1,
+		.invert = true,
 	},
 
 	{ }
