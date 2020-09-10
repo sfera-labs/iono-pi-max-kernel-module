@@ -1,8 +1,8 @@
 # Iono Pi Max driver kernel module
 
-Kernel module for using [Iono Pi Max](https://www.sferalabs.cc/iono-pi-max/) via sysfs files.
+Raspberry Pi OS Kernel module for [Iono Pi Max](https://www.sferalabs.cc/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
 
-For example, from the shell:
+Usage examples, from the shell:
 
 Close a relay:
 
