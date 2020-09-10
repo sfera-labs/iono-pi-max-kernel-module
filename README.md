@@ -173,8 +173,8 @@ the previously saved user configuration, after a power cycle.
 |vso|R/W|&lt;val&gt;|VSO voltage value in mV (11500 - 24500)|
 |vso_mon_v|R|&lt;val&gt;|Actual voltage measured on VSO, in mV|
 |vso_mon_i|R|&lt;val&gt;|Current drain measured on VSO, in mA|
-|5vo|R/W|0|5VO output disabled|
-|5vo|R/W|1|5VO output enabled|
+|5vo_enabled|R/W|0|5VO output disabled|
+|5vo_enabled|R/W|1|5VO output enabled|
 
 ### Wiegand - `/sys/class/ionopimax/wiegand/`
 

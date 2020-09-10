@@ -2472,7 +2472,7 @@ static struct DeviceAttrBean devAttrBeansPowerOut[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "5vo",
+				.name = "5vo_enabled",
 				.mode = 0660,
 			},
 			.show = devAttrI2c_show,
