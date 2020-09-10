@@ -325,14 +325,14 @@ The following properties can be used to improve noise detection and filtering. T
 |status_all|R|&lt;val&gt;|System state register value. Bitmap of all the following status flags from fan_status (bit 0 - LSB) to rs485_err (bit 13)|
 |fan_status|R|0|Fan inactive|
 |fan_status|R|1|Fan active|
-|5vo_err|R|0|5VO output OK|
-|5vo_err|R|1|5VO output failure|
-|5vx_err|R|0|Expansion bus 5V line OK|
-|5vx_err|R|1|Expansion bus 5V line failure|
+|5vo_prot|R|0|5VO output OK|
+|5vo_prot|R|1|5VO output protection enabled. Output temporarily disabled|
+|5vx_prot|R|0|Expansion bus 5V line OK|
+|5vx_prot|R|1|Expansion bus 5V line protection enabled. Output temporarily disabled|
 |expbus_aux|R|0|Expansion bus auxiliary line low|
 |expbus_aux|R|1|Expansion bus auxiliary line high|
 |vso_prot|R|0|VSO output OK|
-|vso_prot|R|1|VSO output protection enabled. VSO temporarily disabled|
+|vso_prot|R|1|VSO output protection enabled. Output temporarily disabled|
 |ao&lt;n&gt;_prot|R|0|AO &lt;n&gt; output OK|
 |ao&lt;n&gt;_prot|R|1|AO &lt;n&gt; output protection enabled. AO &lt;n&gt; temporarily disabled|
 |vso_err|R|0|VSO control OK|

@@ -2644,7 +2644,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "5vo_err",
+				.name = "5vo_prot",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
@@ -2664,7 +2664,7 @@ static struct DeviceAttrBean devAttrBeansSysState[] = {
 	{
 		.devAttr = {
 			.attr = {
-				.name = "5vx_err",
+				.name = "5vx_prot",
 				.mode = 0440,
 			},
 			.show = devAttrI2c_show,
