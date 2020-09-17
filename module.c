@@ -1552,27 +1552,6 @@ static struct DeviceAttrBean devAttrBeansPwrIn[] = {
 };
 
 static struct DeviceAttrBean devAttrBeansSysTemp[] = {
-	// TODO remove 'enabled' attribute in release version
-	{
-		.devAttr = {
-			.attr = {
-				.name = "enabled",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 154,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0xffff,
-			.shift = 0,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
 	{
 		.devAttr = {
 			.attr = {
