@@ -115,10 +115,12 @@ the previously saved user configuration, after a power cycle.
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
+|pdc|R/W|0|Pulldown current disabled|
+|pdc|R/W|1|Pulldown current enabled (default)|
 |o&lt;n&gt;|R/W|0|Relay (O) &lt;n&gt; (1 - 4) open|
 |o&lt;n&gt;|R/W|1|Relay (O) &lt;n&gt; (1 - 4) closed|
-|o&lt;n&gt;|R|F|Relay (O) &lt;n&gt; (1 - 4) fault open|
-|o&lt;n&gt;|R|S|Relay (O) &lt;n&gt; (1 - 4) short circuit|
+|o&lt;n&gt;|R|F|Relay (O) &lt;n&gt; (1 - 4) fault while open|
+|o&lt;n&gt;|R|S|Relay (O) &lt;n&gt; (1 - 4) fault while closed|
 |oc&lt;n&gt;|R/W|0|Open collector (OC) &lt;n&gt; (1 - 4) open|
 |oc&lt;n&gt;|R/W|1|Open collector (OC) &lt;n&gt; (1 - 4) closed|
 |oc&lt;n&gt;|R|F|Open collector (OC) &lt;n&gt; (1 - 4) fault open|
