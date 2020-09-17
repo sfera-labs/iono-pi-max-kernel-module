@@ -39,7 +39,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("0.6");
+MODULE_VERSION("1.0");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -3505,7 +3505,7 @@ static void ionopimax_i2c_unlock(void) {
 
 static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 	int32_t res;
-	char buf[len];
+	char buf[3];
 	uint8_t i;
 
 //	printk(KERN_INFO "ionopimax: - | I2C read reg=%u len=%u\n", reg, len); // TODO remove
@@ -3543,7 +3543,7 @@ static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 
 static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 		uint32_t val) {
-	char buf[len];
+	char buf[3];
 	uint8_t i;
 
 	if (!ionopimax_i2c_client) {
