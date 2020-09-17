@@ -1275,6 +1275,26 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 	{
 		.devAttr = {
 			.attr = {
+				.name = "pdcd",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 137,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 4,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
 				.name = "o1",
 				.mode = 0660,
 			},
