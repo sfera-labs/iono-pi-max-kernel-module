@@ -306,8 +306,8 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|top|R|&lt;val&gt;|Temperature value from sensor on the top board, in &deg;C/100|
-|bottom|R|&lt;val&gt;|Temperature value from sensor on the bottom board, in &deg;C/100|
+|top|R|&lt;val&gt;|Temperature value from sensor on the top side of the bottom board, in &deg;C/100|
+|bottom|R|&lt;val&gt;|Temperature value from sensor on the bottom side of the bottom board, in &deg;C/100|
 
 ### Expansion Bus - `/sys/class/ionopimax/expbus/`
 
