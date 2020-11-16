@@ -259,9 +259,9 @@ The following properties can be used to improve noise detection and filtering. T
 |battery_charge|R|&lt;n&gt;|Estimated battery charge percentage|
 |charger_mon_v|R|&lt;val&gt;|Voltage measured on battery charger output, in mV|
 |charger_mon_i|R|&lt;val&gt;|Current drain measured on battery charger output, in mA|
-|battery_capacity*|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Default: 800|
+|battery_capacity*|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Writable only while UPS disabled. Default: 800|
 |battery_v*|R/W|&lt;n&gt;|Voltage rating of the battery in mV. Accepted values: 12000 or 24000. Default: 12000|
-|battery_i_max*|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Default: 0|
+|battery_i_max*|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Writable only while UPS disabled. Default: 0 |
 |power_delay*|R/W|&lt;t&gt;|UPS automatic power-cycle timeout, in seconds (0 - 65535). Iono will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
 
 ### Power Supply Input - `/sys/class/ionopimax/power_in/`
