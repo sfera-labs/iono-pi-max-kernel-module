@@ -75,6 +75,7 @@ The following paragraphs list all the possible devices (directories) and files c
 You can read and/or write to these files to configure, monitor and control your Iono Pi Max.
 
 Files written in _italic_ are configuration parameters. Those marked with * are not persistent, i.e. their values are reset to default after a power cycle. To change the default values use the `/mcu/config` file (see below).    
+Configuration parameters not marked with * are permanently saved each time they are changed, so that their value is retained across power cycles or MCU resets.   
 This allows to have a different configuration during the boot up phase, even after an abrupt shutdown. For instance, you may want a short watchdog timeout while your application is running, but it needs to be reset to a longer timeout when a power cycle occurs so that Iono Pi Max has the time to boot and restart your application handling the watchdog heartbeat.
 
 ### Button - `/sys/class/ionopimax/button/`
