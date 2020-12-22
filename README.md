@@ -143,26 +143,26 @@ This allows to have a different configuration during the boot up phase, even aft
 |_enabled_*|R/W|1|Analog converter enabled (factory default)|
 |_hsf_*|R/W|0|High speed filter for AV/AI inputs disabled (factory default)|
 |_hsf_*|R/W|1|High speed filter for AV/AI inputs enabled|
-|_av&lt;n&gt;_mode_*|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - +20V) (factory default)|
-|_av&lt;n&gt;_mode_*|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -10V - +10V)|
+|*av&lt;n&gt;_mode**|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - +20V) (factory default)|
+|*av&lt;n&gt;_mode**|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -10V - +10V)|
 |av&lt;n&gt;|R|&lt;val&gt;|AV &lt;n&gt; (1 - 4) voltage value in mV/100|
-|_ai&lt;n&gt;_mode_*|R/W|U|AI &lt;n&gt; (1 - 4) unipolar mode (range 0mA - +20mA) (factory default)|
-|_ai&lt;n&gt;_mode_*|R/W|B|AI &lt;n&gt; (1 - 4) bipolar mode (range -10mA - +10mA)|
+|*ai&lt;n&gt;_mode**|R/W|U|AI &lt;n&gt; (1 - 4) unipolar mode (range 0mA - +20mA) (factory default)|
+|*ai&lt;n&gt;_mode**|R/W|B|AI &lt;n&gt; (1 - 4) bipolar mode (range -10mA - +10mA)|
 |ai&lt;n&gt;|R|&lt;val&gt;|AI &lt;n&gt; (1 - 4) current value in &micro;A|
-|_at&lt;n&gt;_mode_*|R/W|0|AT &lt;n&gt; (1 - 2) disabled (factory default)|
-|_at&lt;n&gt;_mode_*|R/W|1|AT &lt;n&gt; (1 - 2) enabled as PT100 sensor input|
-|_at&lt;n&gt;_mode_*|R/W|2|AT &lt;n&gt; (1 - 2) enabled as PT1000 sensor input|
+|*at&lt;n&gt;_mode**|R/W|0|AT &lt;n&gt; (1 - 2) disabled (factory default)|
+|*at&lt;n&gt;_mode**|R/W|1|AT &lt;n&gt; (1 - 2) enabled as PT100 sensor input|
+|*at&lt;n&gt;_mode**|R/W|2|AT &lt;n&gt; (1 - 2) enabled as PT1000 sensor input|
 |at&lt;n&gt;|R|&lt;val&gt;|AT &lt;n&gt; (1 - 2) temperature value in &deg;C/100|
 
 ### Analog Outputs - `/sys/class/ionopimax/analog_out/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_ao&lt;n&gt;_enabled_*|R/W|0|Analog output (AO) &lt;n&gt; disabled (factory default)|
-|_ao&lt;n&gt;_enabled_*|R/W|1|Analog output (AO) &lt;n&gt; enabled|
-|_ao&lt;n&gt;_mode_*|R/W|I|Analog output (AO) &lt;n&gt; current mode (factory default)|
-|_ao&lt;n&gt;_mode_*|R/W|V|Analog output (AO) &lt;n&gt; voltage mode|
-|_ao&lt;n&gt;_*|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode) or &micro;A (current mode)|
+|*ao&lt;n&gt;_enabled**|R/W|0|Analog output (AO) &lt;n&gt; disabled (factory default)|
+|*ao&lt;n&gt;_enabled**|R/W|1|Analog output (AO) &lt;n&gt; enabled|
+|*ao&lt;n&gt;_mode**|R/W|I|Analog output (AO) &lt;n&gt; current mode (factory default)|
+|*ao&lt;n&gt;_mode**|R/W|V|Analog output (AO) &lt;n&gt; voltage mode|
+|*ao&lt;n&gt;**|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode) or &micro;A (current mode)|
 |ao&lt;n&gt;_err|R|&lt;err&gt;|Analog output (AO) &lt;n&gt; errors register value. Bit 0 (LSB) set to 1 indicates an over-temperature error, bit 1 a load error, and bit 2 (MSB) a common mode error|
 
 ### Power Outputs - `/sys/class/ionopimax/power_out/`
