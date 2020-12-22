@@ -74,9 +74,8 @@ The following paragraphs list all the possible devices (directories) and files c
 
 You can read and/or write to these files to configure, monitor and control your Iono Pi Max.
 
-The values of the configuration files marked with * can be permanently saved in the Iono Pi Max controller using the `/mcu/config` file.
-If not permanently saved, the parameters will be reset to the original factory defaults, or to
-the previously saved user configuration, after a power cycle.
+Files written in _italic_ are configuration parameters. Those marked with * are not persistent, i.e. their values are reset to default after a power cycle. To change the default values use the `/mcu/config` file (see below).    
+This allows to have a different configuration during the boot up phase, even after an abrupt shutdown. For instance, you may want a short watchdog timeout while your application is running, but it needs to be reset to a longer timeout when a power cycle occurs so that Iono Pi Max has the time to boot and restart your application handling the watchdog heartbeat.
 
 ### Button - `/sys/class/ionopimax/button/`
 
@@ -115,8 +114,8 @@ the previously saved user configuration, after a power cycle.
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|pdc|R/W|0|Pulldown current disabled|
-|pdc|R/W|1|Pulldown current enabled (default)|
+|_pdc_*|R/W|0|Pulldown current disabled|
+|_pdc_*|R/W|1|Pulldown current enabled (factory default)|
 |o&lt;n&gt;|R/W|0|Relay (O) &lt;n&gt; (1 - 4) open|
 |o&lt;n&gt;|R/W|1|Relay (O) &lt;n&gt; (1 - 4) closed|
 |o&lt;n&gt;|R|F|Relay (O) &lt;n&gt; (1 - 4) fault while open|
@@ -140,43 +139,43 @@ the previously saved user configuration, after a power cycle.
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|enabled|R/W|0|Analog converter disabled (power off)|
-|enabled|R/W|1|Analog converter enabled|
-|hsf|R/W|0|High speed filter for AV/AI inputs disabled|
-|hsf|R/W|1|High speed filter for AV/AI inputs enabled|
-|av&lt;n&gt;_mode|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - XXV)|
-|av&lt;n&gt;_mode|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -YYV - XXV)|
+|_enabled_*|R/W|0|Analog converter disabled (power off)|
+|_enabled_*|R/W|1|Analog converter enabled (factory default)|
+|_hsf_*|R/W|0|High speed filter for AV/AI inputs disabled (factory default)|
+|_hsf_*|R/W|1|High speed filter for AV/AI inputs enabled|
+|_av&lt;n&gt;_mode_*|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - +20V) (factory default)|
+|_av&lt;n&gt;_mode_*|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -10V - +10V)|
 |av&lt;n&gt;|R|&lt;val&gt;|AV &lt;n&gt; (1 - 4) voltage value in mV/100|
-|ai&lt;n&gt;_mode|R/W|U|AI &lt;n&gt; (1 - 4) unipolar mode (range 0mA - XXmA)|
-|ai&lt;n&gt;_mode|R/W|B|AI &lt;n&gt; (1 - 4) bipolar mode (range -YYmA - XXmA)|
+|_ai&lt;n&gt;_mode_*|R/W|U|AI &lt;n&gt; (1 - 4) unipolar mode (range 0mA - +20mA) (factory default)|
+|_ai&lt;n&gt;_mode_*|R/W|B|AI &lt;n&gt; (1 - 4) bipolar mode (range -10mA - +10mA)|
 |ai&lt;n&gt;|R|&lt;val&gt;|AI &lt;n&gt; (1 - 4) current value in &micro;A|
-|at&lt;n&gt;_mode|R/W|0|AT &lt;n&gt; (1 - 2) disabled|
-|at&lt;n&gt;_mode|R/W|1|AT &lt;n&gt; (1 - 2) enabled as PT100 sensor input|
-|at&lt;n&gt;_mode|R/W|2|AT &lt;n&gt; (1 - 2) enabled as PT1000 sensor input|
+|_at&lt;n&gt;_mode_*|R/W|0|AT &lt;n&gt; (1 - 2) disabled (factory default)|
+|_at&lt;n&gt;_mode_*|R/W|1|AT &lt;n&gt; (1 - 2) enabled as PT100 sensor input|
+|_at&lt;n&gt;_mode_*|R/W|2|AT &lt;n&gt; (1 - 2) enabled as PT1000 sensor input|
 |at&lt;n&gt;|R|&lt;val&gt;|AT &lt;n&gt; (1 - 2) temperature value in &deg;C/100|
 
 ### Analog Outputs - `/sys/class/ionopimax/analog_out/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|ao&lt;n&gt;_enabled|R/W|0|Analog output (AO) &lt;n&gt; disabled|
-|ao&lt;n&gt;_enabled|R/W|1|Analog output (AO) &lt;n&gt; enabled|
-|ao&lt;n&gt;_mode|R/W|I|Analog output (AO) &lt;n&gt; current mode|
-|ao&lt;n&gt;_mode|R/W|V|Analog output (AO) &lt;n&gt; voltage mode|
-|ao&lt;n&gt;|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode) or &micro;A (current mode)|
+|_ao&lt;n&gt;_enabled_*|R/W|0|Analog output (AO) &lt;n&gt; disabled (factory default)|
+|_ao&lt;n&gt;_enabled_*|R/W|1|Analog output (AO) &lt;n&gt; enabled|
+|_ao&lt;n&gt;_mode_*|R/W|I|Analog output (AO) &lt;n&gt; current mode (factory default)|
+|_ao&lt;n&gt;_mode_*|R/W|V|Analog output (AO) &lt;n&gt; voltage mode|
+|_ao&lt;n&gt;_*|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode) or &micro;A (current mode)|
 |ao&lt;n&gt;_err|R|&lt;err&gt;|Analog output (AO) &lt;n&gt; errors register value. Bit 0 (LSB) set to 1 indicates an over-temperature error, bit 1 a load error, and bit 2 (MSB) a common mode error|
 
 ### Power Outputs - `/sys/class/ionopimax/power_out/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|vso_enabled|R/W|0|VSO output disabled|
-|vso_enabled|R/W|1|VSO output enabled|
-|vso|R/W|&lt;val&gt;|VSO voltage value in mV (11500 - 24500)|
+|_vso_enabled_*|R/W|0|VSO output disabled|
+|_vso_enabled_*|R/W|1|VSO output enabled (factory default)|
+|_vso_*|R/W|&lt;val&gt;|VSO voltage value in mV (11500 - 24500) (factory default: 12000)|
 |vso_mon_v|R|&lt;val&gt;|Actual voltage measured on VSO, in mV|
 |vso_mon_i|R|&lt;val&gt;|Current drain measured on VSO, in mA|
-|5vo_enabled|R/W|0|5VO output disabled|
-|5vo_enabled|R/W|1|5VO output enabled|
+|_5vo_enabled_*|R/W|0|5VO output disabled|
+|_5vo_enabled_*|R/W|1|5VO output enabled|
 
 ### Wiegand - `/sys/class/ionopimax/wiegand/`
 
@@ -215,12 +214,12 @@ The following properties can be used to improve noise detection and filtering. T
 |heartbeat|W|0|Set watchdog heartbeat line low|
 |heartbeat|W|1|Set watchdog heartbeat line high|
 |heartbeat|W|F|Flip watchdog heartbeat state|
-|enable_mode*|R/W|D|Watchdog normally disabled (factory default)|
-|enable_mode*|R/W|A|Watchdog always enabled (ignores /enabled value)|
-|timeout*|R/W|&lt;t&gt;|Watchdog heartbeat timeout, in seconds (1 - 65535). Factory default: 60|
-|down_delay*|R/W|&lt;t&gt;|Forced shutdown delay from the moment the timeout is expired and the shutdown cycle has not been enabled, in seconds (1 - 65535). Factory default: 60|
-|sd_switch*|R/W|&lt;n&gt;|Switch boot from SDA/SDB after &lt;n&gt; consecutive watchdog resets, if no heartbeat is detected. A value of n > 1 can be used with /enable_mode set to A only; if /enable_mode is set to D, then /sd_switch is set automatically to 1|
-|sd_switch*|R/W|0|SD switch on watchdog reset disabled (factory default)|
+|_enable_mode_*|R/W|D|Watchdog normally disabled (factory default)|
+|_enable_mode_*|R/W|A|Watchdog always enabled (ignores /enabled value)|
+|_timeout_*|R/W|&lt;t&gt;|Watchdog heartbeat timeout, in seconds (1 - 65535). Factory default: 60|
+|_down_delay_*|R/W|&lt;t&gt;|Forced shutdown delay from the moment the timeout is expired and the shutdown cycle has not been enabled, in seconds (1 - 65535). Factory default: 60|
+|_sd_switch_*|R/W|&lt;n&gt;|Switch boot from SDA/SDB after &lt;n&gt; consecutive watchdog resets, if no heartbeat is detected. A value of n > 1 can be used with /enable_mode set to A only; if /enable_mode is set to D, then /sd_switch is set automatically to 1|
+|_sd_switch_*|R/W|0|SD switch on watchdog reset disabled (factory default)|
 
 ### Power - `/sys/class/ionopimax/power/`
 
@@ -228,22 +227,22 @@ The following properties can be used to improve noise detection and filtering. T
 |----|:---:|:-:|-----------|
 |down_enabled|R/W|0|Delayed shutdown cycle disabled|
 |down_enabled|R/W|1|Delayed shutdown cycle enabled|
-|down_delay*|R/W|&lt;t&gt;|Shutdown delay from the moment it is enabled, in seconds (1 - 65535). Factory default: 60|
-|off_time*|R/W|&lt;t&gt;|Duration of power-off, in seconds (1 - 65535). Factory default: 5|
-|up_delay*|R/W|&lt;t&gt;|Power-up delay after main power is restored, in seconds (0 - 65535). Factory default: 0|
-|down_enable_mode*|R/W|I|Immediate (factory default): when shutdown is enabled, Iono will immediately initiate the power-cycle, i.e. wait for the time specified in /down_delay and then power off the Pi board for the time specified in /off_time|
-|down_enable_mode*|R/W|A|Arm: enabling shutdown will arm the shutdown procedure, but will not start the power-cycle until the shutdown enable line goes low again (i.e. shutdown disabled or Raspberry Pi switched off). After the line goes low, Iono will initiate the power-cycle|
-|up_mode*|R/W|A|Always: if shutdown is enabled when the main power is not present, only the Raspberry Pi is turned off, and the power is always restored after the power-off time, even if running on battery, with no main power present|
-|up_mode*|R/W|M|Main power (factory default): if shutdown is enabled when the main power is not present, Iono is fully powered down after the shutdown wait time, and powered up again only when the main power is restored|
-|sd_switch|R/W|1|Switch boot from SDA/SDB at every power-cycle|
-|sd_switch|R/W|0|SD switch at power-cycle disabled (factory default)|
+|_down_delay_*|R/W|&lt;t&gt;|Shutdown delay from the moment it is enabled, in seconds (1 - 65535). Factory default: 60|
+|_off_time_*|R/W|&lt;t&gt;|Duration of power-off, in seconds (1 - 65535). Factory default: 5|
+|_up_delay_*|R/W|&lt;t&gt;|Power-up delay after main power is restored, in seconds (0 - 65535). Factory default: 0|
+|_down_enable_mode_*|R/W|I|Immediate (factory default): when shutdown is enabled, Iono will immediately initiate the power-cycle, i.e. wait for the time specified in /down_delay and then power off the Pi board for the time specified in /off_time|
+|_down_enable_mode_*|R/W|A|Arm: enabling shutdown will arm the shutdown procedure, but will not start the power-cycle until the shutdown enable line goes low again (i.e. shutdown disabled or Raspberry Pi switched off). After the line goes low, Iono will initiate the power-cycle|
+|_up_mode_*|R/W|A|Always: if shutdown is enabled when the main power is not present, only the Raspberry Pi is turned off, and the power is always restored after the power-off time, even if running on battery, with no main power present|
+|_up_mode_*|R/W|M|Main power (factory default): if shutdown is enabled when the main power is not present, Iono is fully powered down after the shutdown wait time, and powered up again only when the main power is restored|
+|_sd_switch_|R/W|1|Switch boot from SDA/SDB at every power-cycle|
+|_sd_switch_|R/W|0|SD switch at power-cycle disabled (factory default)|
 
 ### UPS - `/sys/class/ionopimax/ups/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|enabled|R/W|0|UPS disabled|
-|enabled|R/W|1|UPS enabled|
+|_enabled_*|R/W|0|UPS disabled|
+|_enabled_*|R/W|1|UPS enabled (factory default)|
 |battery|R|0|Running on main power|
 |battery|R|1|Running on battery power|
 |status|R|0|UPS status: idle|
@@ -259,10 +258,10 @@ The following properties can be used to improve noise detection and filtering. T
 |battery_charge|R|&lt;n&gt;|Estimated battery charge percentage|
 |charger_mon_v|R|&lt;val&gt;|Voltage measured on battery charger output, in mV|
 |charger_mon_i|R|&lt;val&gt;|Current drain measured on battery charger output, in mA|
-|battery_capacity*|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Writable only while UPS disabled. Default: 800|
-|battery_v*|R/W|&lt;n&gt;|Voltage rating of the battery in mV. Accepted values: 12000 or 24000. Default: 12000|
-|battery_i_max*|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Writable only while UPS disabled. Default: 0 |
-|power_delay*|R/W|&lt;t&gt;|UPS automatic power-cycle timeout, in seconds (0 - 65535). Iono will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
+|_battery_capacity_*|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Writable only while UPS disabled. Factory default: 800|
+|_battery_v_*|R/W|&lt;n&gt;|Voltage rating of the battery in mV. Accepted values: 12000 or 24000. factory default: 12000|
+|_battery_i_max_*|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Writable only while UPS disabled. Factory default: 0 |
+|_power_delay_*|R/W|&lt;t&gt;|UPS automatic power-cycle timeout, in seconds (0 - 65535). Iono will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
 
 ### Power Supply Input - `/sys/class/ionopimax/power_in/`
 
@@ -275,14 +274,14 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|sdx_enabled*|R/W|1|SDX bus enabled (factory default)|
-|sdx_enabled*|R/W|0|SDX bus disabled|
-|sd1_enabled*|R/W|1|SD1 bus enabled|
-|sd1_enabled*|R/W|0|SD1 bus disabled (factory default)|
-|sdx_default|R/W|A|At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
-|sdx_default|R/W|B|At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
-|sdx_routing|R/W|A|SDX bus routed to SDA and SD1 bus to SDB (factory default)|
-|sdx_routing|R/W|B|SDX bus routed to SDB and SD1 bus to SDA|
+|_sdx_enabled_*|R/W|1|SDX bus enabled (factory default)|
+|_sdx_enabled_*|R/W|0|SDX bus disabled|
+|_sd1_enabled_*|R/W|1|SD1 bus enabled|
+|_sd1_enabled_*|R/W|0|SD1 bus disabled (factory default)|
+|_sdx_default_|R/W|A|At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
+|_sdx_default_|R/W|B|At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
+|_sdx_routing_|R/W|A|SDX bus routed to SDA and SD1 bus to SDB (factory default)|
+|_sdx_routing_|R/W|B|SDX bus routed to SDB and SD1 bus to SDA|
 
 ### USB - `/sys/class/ionopimax/usb/`
 
@@ -297,8 +296,8 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|always_on|R/W|0|The fan will activate automatically based on system state|
-|always_on|R/W|1|Fan always active|
+|_always_on_*|R/W|0|The fan will activate automatically based on system state (factory default)|
+|_always_on_*|R/W|1|Fan always active|
 |status|R|0|Fan inactive|
 |status|R|1|Fan active|
 
@@ -313,12 +312,12 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|enabled|R/W|0|Expansion bus disabled|
-|enabled|R/W|1|Expansion bus enabled|
+|_enabled_*|R/W|0|Expansion bus disabled (factory default)|
+|_enabled_*|R/W|1|Expansion bus enabled|
 |aux|R|0|Expansion bus auxiliary line low|
 |aux|R|1|Expansion bus auxiliary line high|
-|5vx|R/W|0|Expansion bus 5V power off|
-|5vx|R/W|1|Expansion bus 5V power on|
+|_5vx_*|R/W|0|Expansion bus 5V power off (factory default)|
+|_5vx_*|R/W|1|Expansion bus 5V power on|
 
 ### System state - `/sys/class/ionopimax/sys_state/`
 
