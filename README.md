@@ -355,6 +355,6 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|config|W|S|Persist the current configuration in the controller to be retained across power cycles|
-|config|W|R|Restore the original factory configuration|
+|config|W|S|Save the current configuration as default to be retained across power cycles|
+|config|W|R|Restore the original factory configuration and default values|
 |fw_version|R|&lt;m&gt;.&lt;n&gt;|Read the firmware version, &lt;m&gt; is the major version number, &lt;n&gt; is the minor version number E.g. "1.0"|
