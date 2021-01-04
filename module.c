@@ -2160,6 +2160,46 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 		},
 	},
 
+	{
+		.devAttr = {
+			.attr = {
+				.name = "sdx_enabled_reset",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 52,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 8,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "sd1_enabled_reset",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 52,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 9,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
 	{ }
 };
 
