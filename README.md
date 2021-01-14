@@ -277,8 +277,10 @@ The following properties can be used to improve noise detection and filtering. T
 |----|:---:|:-:|-----------|
 |_sdx_enabled_*|R/W|1|SDX bus enabled (factory default)|
 |_sdx_enabled_*|R/W|0|SDX bus disabled|
+|sdx_enabled|R/W|2|SDX bus disabled, reset to enabled upon power cycle (FW ver. >= 1.2)|
 |_sd1_enabled_*|R/W|1|SD1 bus enabled|
 |_sd1_enabled_*|R/W|0|SD1 bus disabled (factory default)|
+|sd1_enabled|R/W|2|SD1 bus enabled, reset to disabled upon power cycle (FW ver. >= 1.2)|
 |_sdx_default_|R/W|A|At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
 |_sdx_default_|R/W|B|At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
 |_sdx_routing_|R/W|A|SDX bus routed to SDA and SD1 bus to SDB (factory default)|
