@@ -39,7 +39,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.0");
+MODULE_VERSION("1.1");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -115,6 +115,12 @@ static ssize_t devAttrUpsBatteryV_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
 static ssize_t devAttrUpsBatteryV_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrSdEnabled_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrSdEnabled_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
 static ssize_t devAttrMcuFwVersion_show(struct device* dev,
@@ -2086,14 +2092,14 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 				.name = "sdx_enabled",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrSdEnabled_show,
+			.store = devAttrSdEnabled_store,
 		},
 		.regSpecs = {
 			.reg = 52,
 			.len = 2,
 			.maskedReg = false,
-			.mask = 0b1,
+			.mask = 0x0101,
 			.shift = 0,
 			.sign = false,
 			.vals = NULL,
@@ -2106,14 +2112,14 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 				.name = "sd1_enabled",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrSdEnabled_show,
+			.store = devAttrSdEnabled_store,
 		},
 		.regSpecs = {
 			.reg = 52,
 			.len = 2,
 			.maskedReg = false,
-			.mask = 0b1,
+			.mask = 0x0101,
 			.shift = 1,
 			.sign = false,
 			.vals = NULL,
@@ -2157,46 +2163,6 @@ static struct DeviceAttrBean devAttrBeansSd[] = {
 			.shift = 3,
 			.sign = false,
 			.vals = VALS_SD_SDX_ROUTING,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "sdx_enabled_reset",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 52,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 8,
-			.sign = false,
-			.vals = NULL,
-		},
-	},
-
-	{
-		.devAttr = {
-			.attr = {
-				.name = "sd1_enabled_reset",
-				.mode = 0660,
-			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
-		},
-		.regSpecs = {
-			.reg = 52,
-			.len = 2,
-			.maskedReg = false,
-			.mask = 0b1,
-			.shift = 9,
-			.sign = false,
-			.vals = NULL,
 		},
 	},
 
@@ -3824,6 +3790,90 @@ static ssize_t devAttrUpsBatteryV_store(struct device* dev,
 	if (ret < 0) {
 		return ret;
 	}
+	return count;
+}
+
+static ssize_t devAttrSdEnabled_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	int32_t res;
+	struct DeviceAttrRegSpecs *specs;
+	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL) {
+		return -EFAULT;
+	}
+	specs = &dab->regSpecs;
+	if (specs->reg == 0) {
+		return -EFAULT;
+	}
+
+	res = ionopimax_i2c_read_segment((uint8_t) specs->reg, specs->len,
+			specs->mask, specs->shift);
+
+	if (res < 0) {
+		return res;
+	}
+
+	if (res < 2) {
+		return sprintf(buf, "%d\n", res);
+	}
+
+	if (specs->shift == 0) { // SDX
+		if ((res & 1) == 0) {
+			return sprintf(buf, "2\n");
+		} else {
+			return sprintf(buf, "1\n");
+		}
+	} else { // SD1
+		if ((res & 1) == 1) {
+			return sprintf(buf, "2\n");
+		} else {
+			return sprintf(buf, "0\n");
+		}
+	}
+}
+
+static ssize_t devAttrSdEnabled_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	long val;
+	int ret;
+	int32_t res;
+	struct DeviceAttrRegSpecs *specs;
+	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL) {
+		return -EFAULT;
+	}
+	specs = &dab->regSpecsStore;
+	if (specs->reg == 0) {
+		specs = &dab->regSpecs;
+		if (specs->reg == 0) {
+			return -EFAULT;
+		}
+	}
+
+	ret = kstrtol(buf, 10, &val);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+
+	if (val < 0 || val > 2) {
+		return -EINVAL;
+	}
+
+	if (val == 2) {
+		if (specs->shift == 0) { // SDX
+			val = 0x0100;
+		} else { // SD1
+			val = 0x0101;
+		}
+	}
+
+	res = ionopimax_i2c_write_segment((uint8_t) specs->reg, specs->maskedReg,
+			specs->mask, specs->shift, (uint16_t) val);
+
+	if (res < 0) {
+		return res;
+	}
+
 	return count;
 }
 
