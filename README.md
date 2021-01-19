@@ -207,8 +207,8 @@ The following properties can be used to improve noise detection and filtering. T
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|enabled|R/W|0|Watchdog enabled|
-|enabled|R/W|1|Watchdog disabled|
+|enabled|R/W|0|Watchdog disabled|
+|enabled|R/W|1|Watchdog enabled|
 |enabled|W|F|Flip watchdog enabled state|
 |expired|R|0|Watchdog timeout not expired|
 |expired|R|1|Watchdog timeout expired|
