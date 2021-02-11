@@ -180,7 +180,7 @@ This allows to have a different configuration during the boot up phase, even aft
 
 ### Wiegand - `/sys/class/ionopimax/wiegand/`
 
-You can use the TTL lines as Wiegand interfaces for keypads or card readers. You can connect up to two Wiegand devices using DT1/DT2 respctively fot the D0/D1 lines of the first device (w1) and DT3/DT4 for D0/D1 of the second device (w2).
+You can use the DT lines as Wiegand interfaces for keypads or card readers. You can connect up to two Wiegand devices using DT1/DT2 respctively for the D0/D1 lines of the first device (w1) and DT3/DT4 for D0/D1 of the second device (w2).
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
