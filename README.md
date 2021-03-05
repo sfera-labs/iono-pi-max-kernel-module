@@ -53,6 +53,10 @@ Add to `/boot/config.txt` the following line:
 
     dtoverlay=ionopimax
 
+The `99-ionopimax-serial.rules` udev rule makes sure the USB dev connected to Iono's RS-485 interface is always available under `/dev/ionopimax-serial`:
+
+    sudo cp 99-ionopimax-serial.rules /etc/udev/rules.d/
+
 Optionally, to be able to use the `/sys/class/ionopimax/` files not as super user, create a new group "ionopimax" and set it as the module owner group by adding an udev rule:
 
     sudo groupadd ionopimax
