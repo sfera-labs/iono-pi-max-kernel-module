@@ -66,6 +66,10 @@ and add your user to the group, e.g. for user "pi":
 
     sudo usermod -a -G ionopimax pi
 
+To enable SocketCAN support for the CAN FD/CAN 2.0 controller (MCP2518FD), add to `/boot/config.txt` the following line:
+
+    dtoverlay=mcp251xfd,spi0-0,interrupt=28
+
 Reboot:
 
     sudo reboot
@@ -365,3 +369,35 @@ The following properties can be used to improve noise detection and filtering. T
 |config|W|S|Save the current configuration as default to be retained across power cycles|
 |config|W|R|Restore the original factory configuration and default values|
 |fw_version|R|&lt;m&gt;.&lt;n&gt;|Read the firmware version, &lt;m&gt; is the major version number, &lt;n&gt; is the minor version number E.g. "1.0"|
+
+
+### CAN
+
+Check that the SocketCAN interface is correctly enabled by running:
+
+    ifconfig -a
+    
+you should see an interface named `can0`:
+
+    can0: flags=128<NOARP>  mtu 16
+            unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 10  (UNSPEC)
+            RX packets 0  bytes 0 (0.0 B)
+            RX errors 0  dropped 0  overruns 0  frame 0
+            TX packets 0  bytes 0 (0.0 B)
+            TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+            device interrupt 199 
+
+Initialize `can0` specifying communication parameters and protocol options, e.g.:
+
+    sudo ip link set can0 up type can bitrate 1000000 dbitrate 8000000 restart-ms 1000 berr-reporting on fd on
+    sudo ifconfig can0 txqueuelen 65536
+
+Dump data from the bus:
+
+    candump can0
+
+Generate random traffic:
+
+    cangen can0 -mv
+
+Refer to the [SocketCAN documentation](https://www.kernel.org/doc/Documentation/networking/can.txt) for further details.
