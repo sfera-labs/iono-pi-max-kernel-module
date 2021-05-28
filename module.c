@@ -111,6 +111,12 @@ static ssize_t devAttrI2c_store(struct device* dev,
 static ssize_t devAttrI2c_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
+static ssize_t devAttrAxMode_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrAxMode_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
 static ssize_t devAttrUpsBatteryV_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
@@ -180,7 +186,6 @@ static const char VALS_POWER_DOWN_ENABLE_MODE[] = { 2, 'I', 'A' };
 static const char VALS_POWER_UP_MODE[] = { 2, 'M', 'A' };
 static const char VALS_SD_SDX_ROUTING[] = { 2, 'A', 'B' };
 static const char VALS_ANALOG_OUTS_MODE[] = { 2, 'I', 'V' };
-static const char VALS_ANALOG_INS_MODE[] = { 2, 'U', 'B' };
 
 static bool dt1enabled = false;
 static bool dt2enabled = false;
@@ -720,8 +725,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "av1_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -730,7 +735,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 4,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -740,8 +745,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "av2_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -750,7 +755,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 5,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -760,8 +765,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "av3_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -770,7 +775,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 6,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -780,8 +785,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "av4_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -790,7 +795,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 7,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -800,8 +805,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "ai1_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -810,7 +815,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 8,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -820,8 +825,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "ai2_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -830,7 +835,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 9,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -840,8 +845,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "ai3_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -850,7 +855,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 10,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -860,8 +865,8 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 				.name = "ai4_mode",
 				.mode = 0660,
 			},
-			.show = devAttrI2c_show,
-			.store = devAttrI2c_store,
+			.show = devAttrAxMode_show,
+			.store = devAttrAxMode_store,
 		},
 		.regSpecs = {
 			.reg = 69,
@@ -870,7 +875,7 @@ static struct DeviceAttrBean devAttrBeansAnalogIn[] = {
 			.mask = 0b1,
 			.shift = 11,
 			.sign = false,
-			.vals = VALS_ANALOG_INS_MODE,
+			.vals = NULL,
 		},
 	},
 
@@ -3749,6 +3754,92 @@ static ssize_t devAttrI2c_store(struct device* dev,
 
 	if (res < 0) {
 		return res;
+	}
+
+	return count;
+}
+
+static ssize_t devAttrAxMode_show(struct device* dev,
+		struct device_attribute* attr, char *buf) {
+	int32_t res;
+	struct DeviceAttrRegSpecs *specs;
+	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL) {
+		return -EFAULT;
+	}
+	specs = &dab->regSpecs;
+	if (specs->reg == 0) {
+		return -EFAULT;
+	}
+
+	res = ionopimax_i2c_read_segment((uint8_t) specs->reg + 1, specs->len,
+			specs->mask, specs->shift - 4);
+
+	if (res < 0) {
+		return res;
+	}
+
+	if (res == 0) {
+		return sprintf(buf, "0\n");
+	}
+
+	res = ionopimax_i2c_read_segment((uint8_t) specs->reg, specs->len,
+			specs->mask, specs->shift);
+
+	if (res < 0) {
+		return res;
+	}
+
+	if (res == 0) {
+		return sprintf(buf, "U\n");
+	}
+	return sprintf(buf, "B\n");
+}
+
+static ssize_t devAttrAxMode_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count) {
+	int32_t res;
+	char valC;
+	uint16_t en, mode;
+	struct DeviceAttrRegSpecs *specs;
+	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	if (dab == NULL) {
+		return -EFAULT;
+	}
+	specs = &dab->regSpecs;
+	if (specs->reg == 0) {
+		return -EFAULT;
+	}
+
+	valC = toUpper(buf[0]);
+	if (valC == '0') {
+		en = 0;
+		mode = 0xff;
+	} else {
+		en = 1;
+		if (valC == 'U') {
+			mode = 0;
+		} else if (valC == 'B') {
+			mode = 1;
+		} else {
+			return -EINVAL;
+		}
+	}
+
+	res = ionopimax_i2c_write_segment((uint8_t) specs->reg + 1,
+			specs->maskedReg, specs->mask, specs->shift - 4, (uint16_t) en);
+
+	if (res < 0) {
+		return res;
+	}
+
+	if (mode != 0xff) {
+		res = ionopimax_i2c_write_segment((uint8_t) specs->reg,
+				specs->maskedReg, specs->mask, specs->shift, (uint16_t) mode);
+
+		if (res < 0) {
+			return res;
+		}
 	}
 
 	return count;
