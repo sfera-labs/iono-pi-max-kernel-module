@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/time.h>
+#include "atecc/atecc.h"
 
 #define I2C_ADDR_LOCAL 0x35
 
@@ -3146,6 +3147,21 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 	{ }
 };
 
+static struct DeviceAttrBean devAttrBeansAtec[] = {
+	{
+		.devAttr = {
+			.attr = {
+				.name = "serial_num",
+				.mode = 0440,
+			},
+			.show = devAttrAteccSerial_show,
+			.store = NULL,
+		},
+	},
+
+	{ }
+};
+
 static struct DeviceBean devices[] = {
 	{
 		.name = "buzzer",
@@ -3250,6 +3266,11 @@ static struct DeviceBean devices[] = {
 	{
 		.name = "mcu",
 		.devAttrBeans = devAttrBeansMcu,
+	},
+
+	{
+		.name = "sec_elem",
+		.devAttrBeans = devAttrBeansAtec,
 	},
 
 	{ }
@@ -4516,6 +4537,7 @@ static void cleanup(void) {
 	int di, ai;
 
 	i2c_del_driver(&ionopimax_i2c_driver);
+	i2c_del_driver(&atecc_i2c_driver);
 
 	gpio_free(GPIO_SW_RESET);
 	gpio_free(GPIO_SW_EN);
@@ -4552,6 +4574,7 @@ static int __init ionopimax_init(void) {
 	printk(KERN_INFO "ionopimax: - | init\n");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
+	i2c_add_driver(&atecc_i2c_driver);
 
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
 	if (IS_ERR(pDeviceClass)) {

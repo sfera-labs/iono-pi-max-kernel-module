@@ -370,6 +370,11 @@ The following properties can be used to improve noise detection and filtering. T
 |config|W|R|Restore the original factory configuration and default values|
 |fw_version|R|&lt;m&gt;.&lt;n&gt;|Read the firmware version, &lt;m&gt; is the major version number, &lt;n&gt; is the minor version number E.g. "1.0"|
 
+### Secure Element - `/sys/class/exosensepi/sec_elem/`
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|serial_num|R|9 1-byte HEX values|Secure element serial number|
 
 ### CAN
 

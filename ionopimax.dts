@@ -18,6 +18,12 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&ionopimax_di>;
 			};
+			
+			atecc608a: atecc608a@60 {
+				compatible = "sferalabs,atecc";
+				reg = <0x60>;
+				status = "okay";
+			};
 		};
 	};
 	
