@@ -40,7 +40,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.1");
+MODULE_VERSION("1.2");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4537,7 +4537,6 @@ static void cleanup(void) {
 	int di, ai;
 
 	i2c_del_driver(&ionopimax_i2c_driver);
-	i2c_del_driver(&atecc_i2c_driver);
 
 	gpio_free(GPIO_SW_RESET);
 	gpio_free(GPIO_SW_EN);
@@ -4574,7 +4573,7 @@ static int __init ionopimax_init(void) {
 	printk(KERN_INFO "ionopimax: - | init\n");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
-	i2c_add_driver(&atecc_i2c_driver);
+	ateccAddDriver();
 
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
 	if (IS_ERR(pDeviceClass)) {

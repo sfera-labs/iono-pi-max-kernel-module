@@ -4,4 +4,4 @@
 ssize_t devAttrAteccSerial_show(struct device* dev,
 		struct device_attribute* attr, char *buf);
 
-extern struct i2c_driver atecc_i2c_driver;
+void ateccAddDriver(void);

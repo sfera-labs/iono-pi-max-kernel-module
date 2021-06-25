@@ -36,6 +36,7 @@ static void getCRC16LittleEndian(size_t length, const uint8_t *data,
 static int atecc_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id) {
 	uint8_t i;
+	int ret = -1;
 	uint8_t i2c_wake_msg = 0x00; // msg sent to I2C bus to wake up ATECC608A from sleep state
 	uint8_t i2c_response[35];
 	uint8_t crc_le[2]; // CRC-16 little endian for i2c message verification
@@ -66,16 +67,17 @@ static int atecc_i2c_probe(struct i2c_client *client,
 				getCRC16LittleEndian(33, i2c_response, crc_le);
 				if (crc_le[0] == i2c_response[33]
 						&& crc_le[1] == i2c_response[34]) {
-					atecc.probed = true;
 					memcpy(&atecc.serialNumber[0], &i2c_response[1], 4);
 					memcpy(&atecc.serialNumber[4], &i2c_response[9], 5);
-					return 0;
+					atecc.probed = true;
+					ret = 0;
+					break;
 				}
 			}
 		}
 	}
 
-	return -1;
+	return ret;
 }
 
 static int atecc_i2c_remove(struct i2c_client *client) {
@@ -94,7 +96,7 @@ static const struct i2c_device_id atecc_i2c_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, atecc_i2c_id);
 
-struct i2c_driver atecc_i2c_driver = {
+static struct i2c_driver atecc_i2c_driver = {
 	.driver = {
 		.name = "atecc",
 		.owner = THIS_MODULE,
@@ -118,4 +120,9 @@ ssize_t devAttrAteccSerial_show(struct device *dev,
 	}
 
 	return -ENODEV;
+}
+
+void ateccAddDriver() {
+	i2c_add_driver(&atecc_i2c_driver);
+	i2c_del_driver(&atecc_i2c_driver);
 }
