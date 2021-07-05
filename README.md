@@ -119,6 +119,25 @@ This allows to have a different configuration during the boot up phase, even aft
 |di&lt;n&gt;|R|0|Digital input (DI) &lt;n&gt; (1 - 4) low|
 |di&lt;n&gt;|R|1|Digital input (DI) &lt;n&gt; (1 - 4) high|
 
+For each digital input, we also expose: 
+* the debounced state
+* 2 debounce times in ms ("on" for high state and "off" for low state) with default value of 50ms
+* 2 state counters ("on" for high state and "off" for low state)
+
+The debounce times for each DI has been splitted in "on" and "off" in order to make the debounce feature more versatile and suited for particular application needs (e.g. if we consider digital input 1, and set its debounce "on" time to 50ms and its debounce "off" time to 0ms, we just created a delay-on type control for digital input 1 with delay-on time equal to 50ms).    
+Change in value of a debounce time automatically resets both counters.    
+The debounce state of each digital input at system start is UNDEFINED (-1), because if the signal on the specific channel cannot remain stable for a period of time greater than the ones defined as debounce "on" and "off" times, we are not able to provide a valid result. 
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|di*N*_deb|R|1|Digital input *N* debounced value high|
+|di*N*_deb|R|0|Digital input *N* debounced value low|
+|di*N*_deb|R|-1|Digital input *N* debounced value undefined|
+|di*N*_deb_on_ms|RW|val|Minimum stable time in ms to trigger change of the debounced value of digital input *N* to high state. Default value=50|
+|di*N*_deb_off_ms|RW|val|Minimum stable time in ms to trigger change of the debounced value of digital input *N* to low state. Default value=50|
+|di*N*_deb_on_cnt|R|val| Number of times with the debounced value of the digital input *N* in high state. Rolls back to 0 after 4294967295|
+|di*N*_deb_off_cnt|R|val|Number of times with the debounced value of the digital input *N* in low state. Rolls back to 0 after 4294967295|
+
 ### Digital Outputs - `/sys/class/ionopimax/digital_out/`
 
 |File|R/W|Value|Description|

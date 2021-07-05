@@ -29,6 +29,11 @@
 #define GPIO_MODE_IN 1
 #define GPIO_MODE_OUT 2
 
+#define GPIO_DI1 16
+#define GPIO_DI2 19
+#define GPIO_DI3 20
+#define GPIO_DI4 21
+
 #define GPIO_DT1 29
 #define GPIO_DT2 34
 #define GPIO_DT3 35
@@ -37,10 +42,13 @@
 #define GPIO_SW_EN 41
 #define GPIO_SW_RESET 45
 
+#define DEBOUNCE_DEFAULT_TIME_USEC 50000ul
+#define DEBOUNCE_STATE_NOT_DEFINED -1
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.2");
+MODULE_VERSION("1.3");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -52,6 +60,19 @@ struct DeviceAttrRegSpecs {
 	const char *vals;
 };
 
+struct DebounceBean {
+	int gpio;
+	const char* debIrqDevName;
+	int debValue;
+	int debPastValue;
+	int debIrqNum;
+	struct timespec64 lastDebIrqTs;
+	unsigned long debOnMinTime_usec;
+	unsigned long debOffMinTime_usec;
+	unsigned long debOnStateCnt;
+	unsigned long debOffStateCnt;
+};
+
 struct DeviceAttrBean {
 	struct device_attribute devAttr;
 	struct DeviceAttrRegSpecs regSpecs;
@@ -59,6 +80,7 @@ struct DeviceAttrBean {
 	int gpioMode;
 	int gpio;
 	bool invert;
+	struct DebounceBean *debBean;
 };
 
 struct DeviceBean {
@@ -96,6 +118,27 @@ static ssize_t devAttrGpio_show(struct device* dev,
 
 static ssize_t devAttrGpio_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrGpioDeb_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrGpioDebMsOn_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrGpioDebMsOn_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrGpioDebMsOff_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrGpioDebMsOff_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrGpioDebOnCnt_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrGpioDebOffCnt_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
 
 static ssize_t devAttrGpioBlink_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
@@ -225,6 +268,53 @@ static struct WiegandBean w2 = {
 	.pulseIntervalMin_usec = 1200,
 	.pulseIntervalMax_usec = 2700,
 	.noise = 0,
+};
+
+enum digital_in {
+	DI1 = 0,
+	DI2,
+	DI3,
+	DI4,
+};
+
+static struct DebounceBean debounceBeans[] = {
+	[DI1] = {
+		.gpio = GPIO_DI1,
+		.debIrqDevName = "ionopimax_di1_deb",
+		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOnStateCnt = 0,
+		.debOffStateCnt = 0,
+	},
+
+	[DI2] = {
+		.gpio = GPIO_DI2,
+		.debIrqDevName = "ionopimax_di2_deb",
+		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOnStateCnt = 0,
+		.debOffStateCnt = 0,
+	},
+
+	[DI3] = {
+		.gpio = GPIO_DI3,
+		.debIrqDevName = "ionopimax_di3_deb",
+		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOnStateCnt = 0,
+		.debOffStateCnt = 0,
+	},
+
+	[DI4] = {
+		.gpio = GPIO_DI4,
+		.debIrqDevName = "ionopimax_di4_deb",
+		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
+		.debOnStateCnt = 0,
+		.debOffStateCnt = 0,
+	},
+
+	{ }
 };
 
 static struct DeviceAttrBean devAttrBeansBuzzer[] = {
@@ -1238,7 +1328,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.store = NULL,
 		},
 		.gpioMode = GPIO_MODE_IN,
-		.gpio = 16,
+		.gpio = GPIO_DI1,
 	},
 
 	{
@@ -1251,7 +1341,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.store = NULL,
 		},
 		.gpioMode = GPIO_MODE_IN,
-		.gpio = 19,
+		.gpio = GPIO_DI2,
 	},
 
 	{
@@ -1264,7 +1354,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.store = NULL,
 		},
 		.gpioMode = GPIO_MODE_IN,
-		.gpio = 20,
+		.gpio = GPIO_DI3,
 	},
 
 	{
@@ -1277,7 +1367,247 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.store = NULL,
 		},
 		.gpioMode = GPIO_MODE_IN,
-		.gpio = 21,
+		.gpio = GPIO_DI4,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di1_deb",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDeb_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI1],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di2_deb",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDeb_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI2],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di3_deb",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDeb_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI3],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di4_deb",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDeb_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI4],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di1_deb_on_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOn_show,
+			.store = devAttrGpioDebMsOn_store,
+		},
+		.debBean = &debounceBeans[DI1],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di1_deb_off_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOff_show,
+			.store = devAttrGpioDebMsOff_store,
+		},
+		.debBean = &debounceBeans[DI1],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di2_deb_on_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOn_show,
+			.store = devAttrGpioDebMsOn_store,
+		},
+		.debBean = &debounceBeans[DI2],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di2_deb_off_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOff_show,
+			.store = devAttrGpioDebMsOff_store,
+		},
+		.debBean = &debounceBeans[DI2],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di3_deb_on_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOn_show,
+			.store = devAttrGpioDebMsOn_store,
+		},
+		.debBean = &debounceBeans[DI3],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di3_deb_off_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOff_show,
+			.store = devAttrGpioDebMsOff_store,
+		},
+		.debBean = &debounceBeans[DI3],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di4_deb_on_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOn_show,
+			.store = devAttrGpioDebMsOn_store,
+		},
+		.debBean = &debounceBeans[DI4],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di4_deb_off_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOff_show,
+			.store = devAttrGpioDebMsOff_store,
+		},
+		.debBean = &debounceBeans[DI4],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di1_deb_on_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOnCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI1],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di1_deb_off_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOffCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI1],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di2_deb_on_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOnCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI2],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di2_deb_off_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOffCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI2],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di3_deb_on_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOnCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI3],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di3_deb_off_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOffCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI3],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di4_deb_on_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOnCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI4],
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "di4_deb_off_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOffCnt_show,
+			.store = NULL,
+		},
+		.debBean = &debounceBeans[DI4],
 	},
 
 	{ }
@@ -3340,6 +3670,16 @@ static struct DeviceAttrBean* devAttrGetBean(struct DeviceBean* devBean,
 	return NULL;
 }
 
+static unsigned long to_usec(struct timespec64 *t) {
+	return (t->tv_sec * 1000000) + (t->tv_nsec / 1000);
+}
+
+static unsigned long diff_usec(struct timespec64 *t1, struct timespec64 *t2) {
+	struct timespec64 diff;
+	diff = timespec64_sub(*t2, *t1);
+	return to_usec(&diff);
+}
+
 static ssize_t devAttrGpio_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int val;
@@ -3386,6 +3726,139 @@ static ssize_t devAttrGpio_store(struct device* dev,
 	}
 	gpio_set_value(dab->gpio, val ? 1 : 0);
 	return count;
+}
+
+static ssize_t devAttrGpioDeb_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct timespec64 now;
+	unsigned long diff;
+	int actualGPIOStatus;
+	struct DeviceAttrBean *dab;
+	int res;
+
+	ktime_get_raw_ts64(&now);
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
+	diff = diff_usec((struct timespec64*) &dab->debBean->lastDebIrqTs,
+			&now);
+	actualGPIOStatus = gpio_get_value(dab->debBean->gpio);
+	if (actualGPIOStatus) {
+		if (diff >= dab->debBean->debOnMinTime_usec) {
+			res = actualGPIOStatus;
+		} else {
+			res = dab->debBean->debValue;
+		}
+	} else {
+		if (diff >= dab->debBean->debOffMinTime_usec) {
+			res = actualGPIOStatus;
+		} else {
+			res = dab->debBean->debValue;
+		}
+	}
+	return sprintf(buf, "%d\n", res);
+}
+
+static ssize_t devAttrGpioDebMsOn_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
+			devAttr);
+
+	return sprintf(buf, "%lu\n",
+			dab->debBean->debOnMinTime_usec / 1000);
+}
+
+static ssize_t devAttrGpioDebMsOff_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
+			devAttr);
+
+	return sprintf(buf, "%lu\n",
+			dab->debBean->debOffMinTime_usec / 1000);
+}
+
+static ssize_t devAttrGpioDebMsOn_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
+	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
+			devAttr);
+	unsigned int val;
+
+	int ret = kstrtouint(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+	dab->debBean->debOnMinTime_usec = val * 1000;
+	dab->debBean->debOnStateCnt = 0;
+	dab->debBean->debOffStateCnt = 0;
+	dab->debBean->debValue = DEBOUNCE_STATE_NOT_DEFINED;
+	return count;
+}
+
+static ssize_t devAttrGpioDebMsOff_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
+	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
+			devAttr);
+	unsigned int val;
+
+	int ret = kstrtouint(buf, 10, &val);
+	if (ret < 0) {
+		return ret;
+	}
+	dab->debBean->debOffMinTime_usec = val * 1000;
+	dab->debBean->debOnStateCnt = 0;
+	dab->debBean->debOffStateCnt = 0;
+	dab->debBean->debValue = DEBOUNCE_STATE_NOT_DEFINED;
+	return count;
+}
+
+static ssize_t devAttrGpioDebOnCnt_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
+			devAttr);
+	struct timespec64 now;
+	unsigned long diff;
+	int actualGPIOStatus;
+	unsigned long res;
+
+	ktime_get_raw_ts64(&now);
+	diff = diff_usec(
+			(struct timespec64*) &dab->debBean->lastDebIrqTs, &now);
+
+	actualGPIOStatus = gpio_get_value(dab->debBean->gpio);
+	if (dab->debBean->debPastValue == actualGPIOStatus
+			&& actualGPIOStatus
+			&& diff >= dab->debBean->debOnMinTime_usec
+			&& actualGPIOStatus != dab->debBean->debValue) {
+		res = dab->debBean->debOnStateCnt + 1;
+	} else {
+		res = dab->debBean->debOnStateCnt;
+	}
+
+	return sprintf(buf, "%lu\n", res);
+}
+
+static ssize_t devAttrGpioDebOffCnt_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
+			devAttr);
+	struct timespec64 now;
+	unsigned long diff;
+	int actualGPIOStatus;
+	unsigned long res;
+
+	ktime_get_raw_ts64(&now);
+	diff = diff_usec(
+			(struct timespec64*) &dab->debBean->lastDebIrqTs, &now);
+
+	actualGPIOStatus = gpio_get_value(dab->debBean->gpio);
+	if (dab->debBean->debPastValue == actualGPIOStatus
+			&& !actualGPIOStatus
+			&& diff >= dab->debBean->debOffMinTime_usec
+			&& actualGPIOStatus != dab->debBean->debValue) {
+		res = dab->debBean->debOffStateCnt + 1;
+	} else {
+		res = dab->debBean->debOffStateCnt;
+	}
+
+	return sprintf(buf, "%lu\n", res);
 }
 
 static ssize_t devAttrGpioBlink_store(struct device* dev,
@@ -4016,16 +4489,6 @@ static void wiegandReset(struct WiegandBean* w) {
 	w->d1.wasLow = false;
 }
 
-static unsigned long to_usec(struct timespec64 *t) {
-	return (t->tv_sec * 1000000) + (t->tv_nsec / 1000);
-}
-
-static unsigned long diff_usec(struct timespec64 *t1, struct timespec64 *t2) {
-	struct timespec64 diff;
-	diff = timespec64_sub(*t2, *t1);
-	return to_usec(&diff);
-}
-
 static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 		struct pt_regs *regs) {
 	bool isLow;
@@ -4533,6 +4996,51 @@ static struct i2c_driver ionopimax_i2c_driver = {
 	.id_table = ionopimax_i2c_id,
 };
 
+static irqreturn_t gpio_deb_irq_handler(int irq, void *dev_id) {
+	struct timespec64 now;
+	int db = 0;
+	unsigned long diff;
+	int actualGPIOStatus;
+
+	ktime_get_raw_ts64(&now);
+
+	while (debounceBeans[db].debIrqDevName != NULL) {
+		if (debounceBeans[db].debIrqNum == irq && debounceBeans[db].gpio != 0) {
+			actualGPIOStatus = gpio_get_value(debounceBeans[db].gpio);
+
+			diff = diff_usec(
+					(struct timespec64*) &debounceBeans[db].lastDebIrqTs, &now);
+
+			if (debounceBeans[db].debPastValue == actualGPIOStatus) {
+				return IRQ_HANDLED;
+			}
+
+			debounceBeans[db].debPastValue = actualGPIOStatus;
+
+			if (actualGPIOStatus == debounceBeans[db].debValue
+					|| debounceBeans[db].debValue == DEBOUNCE_STATE_NOT_DEFINED) {
+				if (actualGPIOStatus) {
+					if (diff >= debounceBeans[db].debOffMinTime_usec) {
+						debounceBeans[db].debValue = 0;
+						debounceBeans[db].debOffStateCnt++;
+					}
+				} else {
+					if (diff >= debounceBeans[db].debOnMinTime_usec) {
+						debounceBeans[db].debValue = 1;
+						debounceBeans[db].debOnStateCnt++;
+					}
+				}
+			}
+
+			debounceBeans[db].lastDebIrqTs = now;
+			break;
+		}
+		db++;
+	}
+
+	return IRQ_HANDLED;
+}
+
 static void cleanup(void) {
 	int di, ai;
 
@@ -4550,6 +5058,10 @@ static void cleanup(void) {
 						&devices[di].devAttrBeans[ai].devAttr);
 				if (devices[di].devAttrBeans[ai].gpioMode != 0) {
 					gpio_free(devices[di].devAttrBeans[ai].gpio);
+				}
+				if (devices[di].devAttrBeans[ai].debBean != NULL) {
+					free_irq(devices[di].devAttrBeans[ai].debBean->debIrqNum,
+					NULL);
 				}
 				ai++;
 			}
@@ -4609,6 +5121,32 @@ static int __init ionopimax_init(void) {
 					KERN_ALERT "ionopimax: * | error setting up GPIO %d\n",
 							devices[di].devAttrBeans[ai].gpio);
 					goto fail;
+				}
+			}
+			if (devices[di].devAttrBeans[ai].debBean != NULL) {
+				if (!devices[di].devAttrBeans[ai].debBean->debIrqNum) {
+					devices[di].devAttrBeans[ai].debBean->debIrqNum =
+							gpio_to_irq(
+									devices[di].devAttrBeans[ai].debBean->gpio);
+					if (request_irq(
+							devices[di].devAttrBeans[ai].debBean->debIrqNum,
+							(void *) gpio_deb_irq_handler,
+							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+							devices[di].devAttrBeans[ai].debBean->debIrqDevName,
+							NULL)) {
+						printk(
+								KERN_ALERT "ionopimax: * | cannot register IRQ of %s in device %s\n",
+								devices[di].devAttrBeans[ai].devAttr.attr.name,
+								devices[di].name);
+						goto fail;
+					}
+					ktime_get_raw_ts64(
+							&devices[di].devAttrBeans[ai].debBean->lastDebIrqTs);
+					devices[di].devAttrBeans[ai].debBean->debValue =
+					DEBOUNCE_STATE_NOT_DEFINED;
+					devices[di].devAttrBeans[ai].debBean->debPastValue =
+							gpio_get_value(
+									devices[di].devAttrBeans[ai].debBean->gpio);
 				}
 			}
 			ai++;
