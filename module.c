@@ -48,7 +48,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.3");
+MODULE_VERSION("1.4");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4157,6 +4157,20 @@ static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
 	return res;
 }
 
+static ssize_t getFwVersion(uint8_t* major, uint8_t* minor) {
+	int32_t val;
+	val = ionopimax_i2c_read(1, 2);
+
+	if (val < 0) {
+		return val;
+	}
+
+	(*major) = (val >> 8) & 0xf;
+	(*minor) = val & 0xf;
+
+	return 0;
+}
+
 static ssize_t devAttrI2c_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t res;
@@ -4256,6 +4270,8 @@ static ssize_t devAttrI2c_store(struct device* dev,
 static ssize_t devAttrAxMode_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t res;
+	uint8_t major;
+	uint8_t minor;
 	struct DeviceAttrRegSpecs *specs;
 	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
 	if (dab == NULL) {
@@ -4266,15 +4282,23 @@ static ssize_t devAttrAxMode_show(struct device* dev,
 		return -EFAULT;
 	}
 
-	res = ionopimax_i2c_read_segment((uint8_t) specs->reg + 1, specs->len,
-			specs->mask, specs->shift - 4);
+	res = getFwVersion(&major, &minor);
 
 	if (res < 0) {
 		return res;
 	}
 
-	if (res == 0) {
-		return sprintf(buf, "0\n");
+	if (major > 1 || minor >= 3) {
+		res = ionopimax_i2c_read_segment((uint8_t) specs->reg + 1, specs->len,
+				specs->mask, specs->shift - 4);
+
+		if (res < 0) {
+			return res;
+		}
+
+		if (res == 0) {
+			return sprintf(buf, "0\n");
+		}
 	}
 
 	res = ionopimax_i2c_read_segment((uint8_t) specs->reg, specs->len,
@@ -4293,6 +4317,8 @@ static ssize_t devAttrAxMode_show(struct device* dev,
 static ssize_t devAttrAxMode_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count) {
 	int32_t res;
+	uint8_t major;
+	uint8_t minor;
 	char valC;
 	uint16_t en, mode;
 	struct DeviceAttrRegSpecs *specs;
@@ -4305,10 +4331,20 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 		return -EFAULT;
 	}
 
+	res = getFwVersion(&major, &minor);
+
+	if (res < 0) {
+		return res;
+	}
+
 	valC = toUpper(buf[0]);
 	if (valC == '0') {
-		en = 0;
-		mode = 0xff;
+		if (major > 1 || minor >= 3) {
+			en = 0;
+			mode = 0xff;
+		} else {
+			return -EINVAL;
+		}
 	} else {
 		en = 1;
 		if (valC == 'U') {
@@ -4320,11 +4356,13 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 		}
 	}
 
-	res = ionopimax_i2c_write_segment((uint8_t) specs->reg + 1,
-			specs->maskedReg, specs->mask, specs->shift - 4, (uint16_t) en);
+	if (major > 1 || minor >= 3) {
+		res = ionopimax_i2c_write_segment((uint8_t) specs->reg + 1,
+				specs->maskedReg, specs->mask, specs->shift - 4, (uint16_t) en);
 
-	if (res < 0) {
-		return res;
+		if (res < 0) {
+			return res;
+		}
 	}
 
 	if (mode != 0xff) {
@@ -4853,14 +4891,17 @@ static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
 
 static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
-	int32_t val;
-	val = ionopimax_i2c_read(1, 2);
+	int32_t res;
+	uint8_t major;
+	uint8_t minor;
 
-	if (val < 0) {
-		return val;
+	res = getFwVersion(&major, &minor);
+
+	if (res < 0) {
+		return res;
 	}
 
-	return sprintf(buf, "%d.%d\n", (val >> 8) & 0xf, val & 0xf);
+	return sprintf(buf, "%d.%d\n", major, minor);
 }
 
 static ssize_t devAttrMcuConfig_store(struct device* dev,
