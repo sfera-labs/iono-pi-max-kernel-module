@@ -171,6 +171,7 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |_enabled_*|R/W|1|Analog converter enabled (factory default)|
 |_hsf_*|R/W|0|High speed filter for AV/AI inputs disabled (factory default)|
 |_hsf_*|R/W|1|High speed filter for AV/AI inputs enabled|
+|*av&lt;n&gt;_mode**|R/W|0|AV &lt;n&gt; (1 - 4) input disabled (FW >= 1.3)|
 |*av&lt;n&gt;_mode**|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - +20V) (factory default)|
 |*av&lt;n&gt;_mode**|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -10V - +10V)|
 |av&lt;n&gt;|R|&lt;val&gt;|AV &lt;n&gt; (1 - 4) voltage value in mV/100|
