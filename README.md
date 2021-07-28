@@ -175,6 +175,7 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |*av&lt;n&gt;_mode**|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - +20V) (factory default)|
 |*av&lt;n&gt;_mode**|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -10V - +10V)|
 |av&lt;n&gt;|R|&lt;val&gt;|AV &lt;n&gt; (1 - 4) voltage value in mV/100|
+|*ai&lt;n&gt;_mode**|R/W|0|AI &lt;n&gt; (1 - 4) input disabled (FW >= 1.3)|
 |*ai&lt;n&gt;_mode**|R/W|U|AI &lt;n&gt; (1 - 4) unipolar mode (range 0mA - +20mA) (factory default)|
 |*ai&lt;n&gt;_mode**|R/W|B|AI &lt;n&gt; (1 - 4) bipolar mode (range -10mA - +10mA)|
 |ai&lt;n&gt;|R|&lt;val&gt;|AI &lt;n&gt; (1 - 4) current value in &micro;A|
