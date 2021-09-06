@@ -236,6 +236,9 @@ static bool dt2enabled = false;
 static bool dt3enabled = false;
 static bool dt4enabled = false;
 
+static uint8_t fwVerMajor;
+static uint8_t fwVerMinor;
+
 static struct WiegandBean w1 = {
 	.d0 = {
 		.gpio = GPIO_DT1,
@@ -4008,23 +4011,54 @@ static void ionopimax_i2c_unlock(void) {
 	}
 }
 
+static uint8_t ionopimax_i2c_crc_process(uint8_t crc, uint8_t dByte) {
+	uint8_t k;
+	crc ^= dByte;
+	for (k = 0; k < 8; k++)
+		crc = crc & 0x80 ? (crc << 1) ^ 0x2f : crc << 1;
+	return crc;
+}
+
+static void ionopimax_i2c_add_crc(int reg, char *data, uint8_t len) {
+	uint8_t i;
+	uint8_t crc;
+
+	crc = ionopimax_i2c_crc_process(0xff, reg);
+	for (i = 0; i < len; i++) {
+		crc = ionopimax_i2c_crc_process(crc, data[i]);
+	}
+	data[len] = crc;
+}
+
 static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 	int32_t res;
-	char buf[3];
+	char buf[4];
 	uint8_t i;
-
-//	printk(KERN_INFO "ionopimax: - | I2C read reg=%u len=%u\n", reg, len); // TODO remove
+	uint8_t crc;
 
 	if (!ionopimax_i2c_client) {
 		return -EIO;
 	}
 
+	if (fwVerMajor > 1 || fwVerMinor >= 4) {
+		len++;
+	}
+
 	for (i = 0; i < 3; i++) {
 		res = i2c_smbus_read_i2c_block_data(ionopimax_i2c_client, reg, len,
 				buf);
-//		printk(KERN_INFO "ionopimax: - | I2C read %d res=%d\n", i, res); // TODO remove
 		if (res == len) {
-			break;
+			if (fwVerMajor > 1 || fwVerMinor >= 4) {
+				crc = buf[len - 1];
+				ionopimax_i2c_add_crc(reg, buf, len - 1);
+				if (crc == buf[len - 1]) {
+					break;
+				} else {
+					res = -1;
+				}
+			} else {
+				break;
+			}
 		}
 	}
 
@@ -4032,23 +4066,21 @@ static int32_t ionopimax_i2c_read_no_lock(uint8_t reg, uint8_t len) {
 		return -EIO;
 	}
 
+	if (fwVerMajor > 1 || fwVerMinor >= 4) {
+		len--;
+	}
+
 	res = 0;
 	for (i = 0; i < len; i++) {
 		res |= (buf[i] & 0xff) << (i * 8);
 	}
-
-//	printk(KERN_INFO "ionopimax: - | I2C read res=%d b0=%u b1=%u b2=%u\n", res,
-//			buf[0] & 0xff, buf[1] & 0xff, len == 3 ? buf[2] & 0xff : 0);  // TODO remove
-//
-//	printk(KERN_INFO "ionopimax: - | I2C read word=%d\n",
-//			i2c_smbus_read_word_data(ionopimax_i2c_client, reg));  // TODO remove
 
 	return res;
 }
 
 static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 		uint32_t val) {
-	char buf[3];
+	char buf[4];
 	uint8_t i;
 
 	if (!ionopimax_i2c_client) {
@@ -4058,10 +4090,11 @@ static int32_t ionopimax_i2c_write_no_lock(uint8_t reg, uint8_t len,
 	for (i = 0; i < len; i++) {
 		buf[i] = val >> (8 * i);
 	}
+	if (fwVerMajor > 1 || fwVerMinor >= 4) {
+		ionopimax_i2c_add_crc(reg, buf, len);
+		len++;
+	}
 	for (i = 0; i < 3; i++) {
-//		printk(
-//		KERN_INFO "ionopimax: - | I2C write %d reg=%u len=%u val=0x%04x\n",
-//				i, reg, len, val); // TODO remove
 		if (!i2c_smbus_write_i2c_block_data(ionopimax_i2c_client, reg, len,
 				buf)) {
 			return len;
@@ -4155,20 +4188,6 @@ static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
 	ionopimax_i2c_unlock();
 
 	return res;
-}
-
-static ssize_t getFwVersion(uint8_t* major, uint8_t* minor) {
-	int32_t val;
-	val = ionopimax_i2c_read(1, 2);
-
-	if (val < 0) {
-		return val;
-	}
-
-	(*major) = (val >> 8) & 0xf;
-	(*minor) = val & 0xf;
-
-	return 0;
 }
 
 static ssize_t devAttrI2c_show(struct device* dev,
@@ -4270,8 +4289,6 @@ static ssize_t devAttrI2c_store(struct device* dev,
 static ssize_t devAttrAxMode_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t res;
-	uint8_t major;
-	uint8_t minor;
 	struct DeviceAttrRegSpecs *specs;
 	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
 	if (dab == NULL) {
@@ -4282,13 +4299,7 @@ static ssize_t devAttrAxMode_show(struct device* dev,
 		return -EFAULT;
 	}
 
-	res = getFwVersion(&major, &minor);
-
-	if (res < 0) {
-		return res;
-	}
-
-	if (major > 1 || minor >= 3) {
+	if (fwVerMajor > 1 || fwVerMinor >= 3) {
 		res = ionopimax_i2c_read_segment((uint8_t) specs->reg + 1, specs->len,
 				specs->mask, specs->shift - 4);
 
@@ -4317,8 +4328,6 @@ static ssize_t devAttrAxMode_show(struct device* dev,
 static ssize_t devAttrAxMode_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count) {
 	int32_t res;
-	uint8_t major;
-	uint8_t minor;
 	char valC;
 	uint16_t en, mode;
 	struct DeviceAttrRegSpecs *specs;
@@ -4331,15 +4340,9 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 		return -EFAULT;
 	}
 
-	res = getFwVersion(&major, &minor);
-
-	if (res < 0) {
-		return res;
-	}
-
 	valC = toUpper(buf[0]);
 	if (valC == '0') {
-		if (major > 1 || minor >= 3) {
+		if (fwVerMajor > 1 || fwVerMinor >= 3) {
 			en = 0;
 			mode = 0xff;
 		} else {
@@ -4356,7 +4359,7 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 		}
 	}
 
-	if (major > 1 || minor >= 3) {
+	if (fwVerMajor > 1 || fwVerMinor >= 3) {
 		res = ionopimax_i2c_write_segment((uint8_t) specs->reg + 1,
 				specs->maskedReg, specs->mask, specs->shift - 4, (uint16_t) en);
 
@@ -4630,10 +4633,6 @@ static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
 		w->bitCount++;
 	}
 
-// TODO remove
-//	printk(KERN_ALERT "ionopimax: * | wiegandDataIrqHandler %d %lld %lu\n",
-//			w->bitCount, w->data, diff);
-
 	return (irq_handler_t) IRQ_HANDLED;
 
 	noise:
@@ -4889,19 +4888,30 @@ static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
 	return count;
 }
 
+static ssize_t getFwVersion(void) {
+	int32_t val;
+	val = ionopimax_i2c_read(1, 2);
+
+	if (val < 0) {
+		return val;
+	}
+
+	fwVerMajor = (val >> 8) & 0xf;
+	fwVerMinor = val & 0xf;
+
+	return 0;
+}
+
 static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 		struct device_attribute* attr, char *buf) {
 	int32_t res;
-	uint8_t major;
-	uint8_t minor;
 
-	res = getFwVersion(&major, &minor);
-
+	res = getFwVersion();
 	if (res < 0) {
 		return res;
 	}
 
-	return sprintf(buf, "%d.%d\n", major, minor);
+	return sprintf(buf, "%d.%d\n", fwVerMajor, fwVerMinor);
 }
 
 static ssize_t devAttrMcuConfig_store(struct device* dev,
@@ -5198,7 +5208,11 @@ static int __init ionopimax_init(void) {
 	gpio_set_value(GPIO_SW_EN, 0);
 	gpio_set_value(GPIO_SW_RESET, 1);
 
-	printk(KERN_INFO "ionopimax: - | ready\n");
+	if (getFwVersion() < 0) {
+		goto fail;
+	}
+
+	printk(KERN_INFO "ionopimax: - | ready FW%d.%d\n", fwVerMajor, fwVerMinor);
 	return 0;
 
 	fail:
