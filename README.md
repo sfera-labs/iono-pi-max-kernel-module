@@ -80,7 +80,7 @@ After loading the module, you will find all the available devices under the dire
 
 The following paragraphs list all the possible devices (directories) and files coresponding to Iono Pi Max's features. 
 
-You can read and/or write to these files to configure, monitor and control your Iono Pi Max.
+You can write to and/or read these files to configure, monitor and control your Iono Pi Max. The kernel module will take care of performing the corresponding GPIO or I2C operations. I2C transactions are automatically repeated in case of error and CRC validation is used when supported by the installed firmware (>= 1.4).
 
 Files written in _italic_ are configuration parameters. Those marked with * are not persistent, i.e. their values are reset to default after a power cycle. To change the default values use the `/mcu/config` file (see below).    
 Configuration parameters not marked with * are permanently saved each time they are changed, so that their value is retained across power cycles or MCU resets.   
