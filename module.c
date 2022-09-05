@@ -1,7 +1,7 @@
 /*
  * ionopimax
  *
- *     Copyright (C) 2020 Sfera Labs S.r.l.
+ *     Copyright (C) 2020-2022 Sfera Labs S.r.l.
  *
  *     For information, visit https://www.sferalabs.cc
  *
@@ -48,7 +48,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.7");
+MODULE_VERSION("1.8");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -222,6 +222,12 @@ static ssize_t mcuI2cRead_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
 static ssize_t mcuI2cWrite_store(struct device* dev,
+		struct device_attribute* attr, const char *buf, size_t count);
+
+static ssize_t devAttrSerialRs232Rs485Inv_show(struct device* dev,
+		struct device_attribute* attr, char *buf);
+
+static ssize_t devAttrSerialRs232Rs485Inv_store(struct device* dev,
 		struct device_attribute* attr, const char *buf, size_t count);
 
 static const char VALS_DIGITAL_OUTS_STATUS[] = { 4, '0', '1', 'F', 'S' };
@@ -3495,6 +3501,50 @@ static struct DeviceAttrBean devAttrBeansAtec[] = {
 	{ }
 };
 
+static struct DeviceAttrBean devAttrBeansSerial[] = {
+	{
+		.devAttr = {
+			.attr = {
+				.name = "rs232_rs485_inv",
+				.mode = 0660,
+			},
+			.show = devAttrSerialRs232Rs485Inv_show,
+			.store = devAttrSerialRs232Rs485Inv_store,
+		},
+		.regSpecs = {
+			.reg = 26,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "rs485_txe",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 27,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0b1,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		},
+	},
+
+	{ }
+};
+
 static struct DeviceBean devices[] = {
 	{
 		.name = "buzzer",
@@ -3604,6 +3654,11 @@ static struct DeviceBean devices[] = {
 	{
 		.name = "sec_elem",
 		.devAttrBeans = devAttrBeansAtec,
+	},
+
+	{
+		.name = "serial",
+		.devAttrBeans = devAttrBeansSerial,
 	},
 
 	{ }
@@ -4992,6 +5047,184 @@ static ssize_t mcuI2cWrite_store(struct device* dev,
 
 	if (ionopimax_i2c_write((uint8_t) reg, 2, (uint32_t) val) < 0) {
 		return -EIO;
+	}
+
+	return count;
+}
+
+static ssize_t devAttrSerialRs232Rs485Inv_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	int32_t res;
+	long val;
+	res = devAttrI2c_show(dev, attr, buf);
+	if (res < 0) {
+		return res;
+	}
+	if (kstrtol(buf, 10, &val) < 0) {
+		return -EINVAL;
+	}
+
+	if ((val & 1) == 0) {
+		return sprintf(buf, "0\n");
+	}
+
+	if ((val & 2) == 0) {
+		return sprintf(buf, "1\n");
+	}
+
+	switch ((val >> 8) & 0xf) {
+	case 2:
+		res = sprintf(buf, "1200");
+		break;
+	case 3:
+		res = sprintf(buf, "2400");
+		break;
+	case 4:
+		res = sprintf(buf, "4800");
+		break;
+	case 5:
+		res = sprintf(buf, "9600");
+		break;
+	case 6:
+		res = sprintf(buf, "19200");
+		break;
+	case 7:
+		res = sprintf(buf, "38400");
+		break;
+	case 8:
+		res = sprintf(buf, "57600");
+		break;
+	case 9:
+		res = sprintf(buf, "115200");
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	res += sprintf(buf + res, " ");
+
+	res += sprintf(buf + res, (((val >> 14) & 1) == 0) ? "7" : "8");
+
+	switch ((val >> 12) & 0x3) {
+	case 0:
+		res += sprintf(buf + res, "N");
+		break;
+	case 1:
+		res += sprintf(buf + res, "O");
+		break;
+	case 2:
+		res += sprintf(buf + res, "E");
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	res += sprintf(buf + res, (((val >> 15) & 1) == 0) ? "1" : "2");
+
+	res += sprintf(buf + res, "\n");
+
+	return res;
+}
+
+static ssize_t devAttrSerialRs232Rs485Inv_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
+	int ret;
+	char *end = NULL;
+	long baud;
+	uint16_t regVal;
+	char regStr[6];
+
+	baud = simple_strtol(buf, &end, 10);
+	if (buf == end) {
+		return -EINVAL;
+	}
+
+	switch (baud) {
+	case 0:
+		case 1:
+		regVal = baud;
+		break;
+	case 1200:
+		regVal = 2;
+		break;
+	case 2400:
+		regVal = 3;
+		break;
+	case 4800:
+		regVal = 4;
+		break;
+	case 9600:
+		regVal = 5;
+		break;
+	case 19200:
+		regVal = 6;
+		break;
+	case 38400:
+		regVal = 7;
+		break;
+	case 57600:
+		regVal = 8;
+		break;
+	case 115200:
+		regVal = 9;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (regVal > 1) {
+		if (end + 4 > buf + count) {
+			return -EINVAL;
+		}
+
+		regVal <<= 8;
+		regVal |= 0x3;
+
+		switch (end[1]) {
+		case '7':
+			break;
+		case '8':
+			regVal |= 0x4000;
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		switch (end[2]) {
+		case 'n':
+			case 'N':
+			break;
+		case 'o':
+			case 'O':
+			regVal |= 0x1000;
+			break;
+		case 'e':
+			case 'E':
+			regVal |= 0x2000;
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		switch (end[3]) {
+		case '1':
+			break;
+		case '2':
+			regVal |= 0x8000;
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+
+	ret = sprintf(regStr, "%d", regVal);
+	if (ret < 1) {
+		return ret;
+	}
+
+	ret = devAttrI2c_store(dev, attr, regStr, ret);
+	if (ret < 0) {
+		return ret;
 	}
 
 	return count;
