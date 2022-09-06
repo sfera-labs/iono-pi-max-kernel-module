@@ -57,7 +57,7 @@ Add to `/boot/config.txt` the following line:
 
     dtoverlay=ionopimax
 
-The `99-ionopimax-serial.rules` udev rule makes sure the USB dev connected to Iono's RS-485 interface is always available under `/dev/ionopimax-serial`:
+The `99-ionopimax-serial.rules` udev rule makes sure the USB dev connected to Iono's RS-485 (or RS-232 if inverted) interface is always available under `/dev/ionopimax-serial`:
 
     sudo cp 99-ionopimax-serial.rules /etc/udev/rules.d/
 
@@ -211,31 +211,6 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |_5vo_enabled_*|R/W|0|5VO output disabled|
 |_5vo_enabled_*|R/W|1|5VO output enabled|
 
-### Wiegand - `/sys/class/ionopimax/wiegand/`
-
-You can use the DT lines as Wiegand interfaces for keypads or card readers. You can connect up to two Wiegand devices using DT1/DT2 respctively for the D0/D1 lines of the first device (w1) and DT3/DT4 for D0/D1 of the second device (w2).
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|w&lt;N&gt;_enabled|R/W|0|Wiegand interface w&lt;N&gt; disabled|
-|w&lt;N&gt;_enabled|R/W|1|Wiegand interface w&lt;N&gt; enabled|
-|w&lt;N&gt;_data|R|&lt;ts&gt; &lt;bits&gt; &lt;data&gt;|Latest data read from wiegand interface w&lt;N&gt;. The first number (&lt;ts&gt;) represents an internal timestamp of the received data, it shall be used only to discern newly available data from the previous one. &lt;bits&gt; reports the number of bits received (max 64). &lt;data&gt; is the sequence of bits received represnted as unsigned integer|
-
-The following properties can be used to improve noise detection and filtering. The w&lt;N&gt;_noise property reports the latest event and is reset to 0 after being read.
-
-|File|R/W|Value|Description|
-|----|:---:|:-:|-----------|
-|w&lt;N&gt;_pulse_width_max|R/W|&lt;val&gt;|Maximum bit pulse width accepted, in &micro;s|
-|w&lt;N&gt;_pulse_width_min|R/W|&lt;val&gt;|Minimum bit pulse width accepted, in &micro;s|
-|w&lt;N&gt;_pulse_itvl_max|R/W|&lt;val&gt;|Maximum interval between pulses accepted, in &micro;s|
-|w&lt;N&gt;_pulse_itvl_min|R/W|&lt;val&gt;|Minimum interval between pulses accepted, in &micro;s|
-|w&lt;N&gt;_noise|R|0|No noise|
-|w&lt;N&gt;_noise|R|10|Fast pulses on lines|
-|w&lt;N&gt;_noise|R|11|Pulses interval too short|
-|w&lt;N&gt;_noise|R|12/13|Concurrent movement on both D0/D1 lines|
-|w&lt;N&gt;_noise|R|14|Pulse too short|
-|w&lt;N&gt;_noise|R|15|Pulse too long|
-
 ### Watchdog - `/sys/class/ionopimax/watchdog/`
 
 |File|R/W|Value|Description|
@@ -344,6 +319,18 @@ The following properties can be used to improve noise detection and filtering. T
 |top|R|&lt;val&gt;|Temperature value from sensor on the top side of the bottom board, in &deg;C/100|
 |bottom|R|&lt;val&gt;|Temperature value from sensor on the bottom side of the bottom board, in &deg;C/100|
 
+### Serial - `/sys/class/ionopimax/serial/`
+
+Requires FW version >= 1.6
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|rs232_rs485_inv|R/W|0|RS-232 connected to UART, RS-485 connected to USB (default)|
+|rs232_rs485_inv|R/W|1|RS-232 connected to USB, RS-485 connected to UART with TX enable line not controlled (use rs485_txe)|
+|rs232_rs485_inv|R/W|&lt;baud&gt; &lt;B&gt;&lt;P&gt;&lt;S&gt;|RS-232 connected to USB, RS-485 connected to UART with TX enable line automatically controlled based on the specified parameters:<br/>&lt;baud&gt; - baud rate: 1200, 2400, 4800, 9600, 19200, 38400, 57600, or 115200<br/>&lt;B&gt; - bits: 7 or 8<br/>&lt;P&gt; - parity: N (none), E (even), or O (odd)<br/>&lt;S&gt; - stop bits: 1 or 2<br/>Example: "9600 8N1"|
+|rs485_txe|R/W|0|RS-485 TX enable line control: transmission disabled|
+|rs485_txe|R/W|1|RS-485 TX enable line control: transmission enabled|
+
 ### Expansion Bus - `/sys/class/ionopimax/expbus/`
 
 |File|R/W|Value|Description|
@@ -386,6 +373,31 @@ The following properties can be used to improve noise detection and filtering. T
 |rs232_err|R|1|RS-232 interface failure|
 |rs485_err|R|0|RS-485 interface OK|
 |rs485_err|R|1|RS-485 interface failure|
+
+### Wiegand - `/sys/class/ionopimax/wiegand/`
+
+You can use the DT lines as Wiegand interfaces for keypads or card readers. You can connect up to two Wiegand devices using DT1/DT2 respctively for the D0/D1 lines of the first device (w1) and DT3/DT4 for D0/D1 of the second device (w2).
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|w&lt;N&gt;_enabled|R/W|0|Wiegand interface w&lt;N&gt; disabled|
+|w&lt;N&gt;_enabled|R/W|1|Wiegand interface w&lt;N&gt; enabled|
+|w&lt;N&gt;_data|R|&lt;ts&gt; &lt;bits&gt; &lt;data&gt;|Latest data read from wiegand interface w&lt;N&gt;. The first number (&lt;ts&gt;) represents an internal timestamp of the received data, it shall be used only to discern newly available data from the previous one. &lt;bits&gt; reports the number of bits received (max 64). &lt;data&gt; is the sequence of bits received represnted as unsigned integer|
+
+The following properties can be used to improve noise detection and filtering. The w&lt;N&gt;_noise property reports the latest event and is reset to 0 after being read.
+
+|File|R/W|Value|Description|
+|----|:---:|:-:|-----------|
+|w&lt;N&gt;_pulse_width_max|R/W|&lt;val&gt;|Maximum bit pulse width accepted, in &micro;s|
+|w&lt;N&gt;_pulse_width_min|R/W|&lt;val&gt;|Minimum bit pulse width accepted, in &micro;s|
+|w&lt;N&gt;_pulse_itvl_max|R/W|&lt;val&gt;|Maximum interval between pulses accepted, in &micro;s|
+|w&lt;N&gt;_pulse_itvl_min|R/W|&lt;val&gt;|Minimum interval between pulses accepted, in &micro;s|
+|w&lt;N&gt;_noise|R|0|No noise|
+|w&lt;N&gt;_noise|R|10|Fast pulses on lines|
+|w&lt;N&gt;_noise|R|11|Pulses interval too short|
+|w&lt;N&gt;_noise|R|12/13|Concurrent movement on both D0/D1 lines|
+|w&lt;N&gt;_noise|R|14|Pulse too short|
+|w&lt;N&gt;_noise|R|15|Pulse too long|
 
 ### MCU - `/sys/class/ionopimax/mcu/`
 
