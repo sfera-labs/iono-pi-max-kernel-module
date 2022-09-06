@@ -325,9 +325,9 @@ Requires FW version >= 1.6
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|rs232_rs485_inv|R/W|0|RS-232 connected to UART, RS-485 connected to USB (default)|
-|rs232_rs485_inv|R/W|1|RS-232 connected to USB, RS-485 connected to UART with TX enable line not controlled (use rs485_txe)|
-|rs232_rs485_inv|R/W|&lt;baud&gt; &lt;B&gt;&lt;P&gt;&lt;S&gt;|RS-232 connected to USB, RS-485 connected to UART with TX enable line automatically controlled based on the specified parameters:<br/>&lt;baud&gt; - baud rate: 1200, 2400, 4800, 9600, 19200, 38400, 57600, or 115200<br/>&lt;B&gt; - bits: 7 or 8<br/>&lt;P&gt; - parity: N (none), E (even), or O (odd)<br/>&lt;S&gt; - stop bits: 1 or 2<br/>Example: "9600 8N1"|
+|*rs232_rs485_inv**|R/W|0|RS-232 connected to UART, RS-485 connected to USB (default)|
+|*rs232_rs485_inv**|R/W|1|RS-232 connected to USB, RS-485 connected to UART with TX enable line not controlled (use rs485_txe)|
+|*rs232_rs485_inv**|R/W|&lt;baud&gt; &lt;B&gt;&lt;P&gt;&lt;S&gt;|RS-232 connected to USB, RS-485 connected to UART with TX enable line automatically controlled based on the specified parameters:<br/>&lt;baud&gt; - baud rate: 1200, 2400, 4800, 9600, 19200, 38400, 57600, or 115200<br/>&lt;B&gt; - bits: 7 or 8<br/>&lt;P&gt; - parity: N (none), E (even), or O (odd)<br/>&lt;S&gt; - stop bits: 1 or 2<br/>Example: "9600 8N1"|
 |rs485_txe|R/W|0|RS-485 TX enable line control: transmission disabled|
 |rs485_txe|R/W|1|RS-485 TX enable line control: transmission enabled|
 
