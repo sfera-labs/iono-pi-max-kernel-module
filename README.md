@@ -196,7 +196,7 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |*ao&lt;n&gt;_enabled**|R/W|1|Analog output (AO) &lt;n&gt; enabled|
 |*ao&lt;n&gt;_mode**|R/W|I|Analog output (AO) &lt;n&gt; current mode (factory default)|
 |*ao&lt;n&gt;_mode**|R/W|V|Analog output (AO) &lt;n&gt; voltage mode|
-|*ao&lt;n&gt;**|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode) or &micro;A (current mode)|
+|*ao&lt;n&gt;**|R/W|&lt;val&gt;|Analog output (AO) &lt;n&gt; value, in mV (voltage mode - range 0-10000) or &micro;A (current mode - range 0-20000)|
 |ao&lt;n&gt;_err|R|&lt;err&gt;|Analog output (AO) &lt;n&gt; errors register value. Bit 0 (LSB) set to 1 indicates an over-temperature error, bit 1 a load error, and bit 2 (MSB) a common mode error|
 
 ### Power Outputs - `/sys/class/ionopimax/power_out/`
