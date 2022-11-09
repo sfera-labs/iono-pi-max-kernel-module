@@ -12,22 +12,18 @@
  *
  */
 
-#include <linux/delay.h>
-#include <linux/gpio.h>
-#include <linux/i2c.h>
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/interrupt.h>
-#include <linux/time.h>
+#include "commons/commons.h"
+#include "gpio/gpio.h"
+#include "wiegand/wiegand.h"
 #include "atecc/atecc.h"
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/of.h>
+#include <linux/delay.h>
+#include <linux/i2c.h>
 
 #define I2C_ADDR_LOCAL 0x35
-
-#define WIEGAND_MAX_BITS 64
-
-#define GPIO_MODE_IN 1
-#define GPIO_MODE_OUT 2
 
 #define GPIO_DI1 16
 #define GPIO_DI2 19
@@ -39,11 +35,24 @@
 #define GPIO_DT3 35
 #define GPIO_DT4 36
 
+#define GPIO_BUZZER 40
+
+#define GPIO_BUTTON 38
+
+#define GPIO_WD_EN 39
+#define GPIO_WD_HEARTBEAT 32
+#define GPIO_WD_EXPIRED 17
+
+#define GPIO_PWR_DWN_EN 18
+
+#define GPIO_USB1_EN 30
+#define GPIO_USB1_ERR 0
+
+#define GPIO_USB2_EN 31
+#define GPIO_USB2_ERR 1
+
 #define GPIO_SW_EN 41
 #define GPIO_SW_RESET 45
-
-#define DEBOUNCE_DEFAULT_TIME_USEC 50000ul
-#define DEBOUNCE_STATE_NOT_DEFINED -1
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
@@ -62,7 +71,7 @@ struct DeviceAttrRegSpecs {
 
 struct DebounceBean {
 	int gpio;
-	const char* debIrqDevName;
+	const char *debIrqDevName;
 	int debValue;
 	int debPastValue;
 	int debIrqNum;
@@ -77,10 +86,7 @@ struct DeviceAttrBean {
 	struct device_attribute devAttr;
 	struct DeviceAttrRegSpecs regSpecs;
 	struct DeviceAttrRegSpecs regSpecsStore;
-	int gpioMode;
-	int gpio;
-	bool invert;
-	struct DebounceBean *debBean;
+	struct GpioBean *gpio;
 };
 
 struct DeviceBean {
@@ -89,146 +95,52 @@ struct DeviceBean {
 	struct DeviceAttrBean *devAttrBeans;
 };
 
-struct WiegandLine {
-	int gpio;
-	unsigned int irq;
-	bool irqRequested;
-	bool wasLow;
-};
-
-struct WiegandBean {
-	struct WiegandLine d0;
-	struct WiegandLine d1;
-	struct WiegandLine *activeLine;
-	unsigned long pulseIntervalMin_usec;
-	unsigned long pulseIntervalMax_usec;
-	unsigned long pulseWidthMin_usec;
-	unsigned long pulseWidthMax_usec;
-	bool enabled;
-	uint64_t data;
-	int bitCount;
-	int noise;
-	struct timespec64 lastBitTs;
-};
-
 static struct class *pDeviceClass;
 
-static ssize_t devAttrGpio_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrI2c_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrGpio_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t devAttrI2c_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrGpioDeb_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrAxMode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrGpioDebMsOn_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrAxMode_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrGpioDebMsOn_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t devAttrUpsBatteryV_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrGpioDebMsOff_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrUpsBatteryV_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrGpioDebMsOff_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t devAttrSdEnabled_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrGpioDebOnCnt_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrSdEnabled_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrGpioDebOffCnt_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrMcuFwVersion_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrGpioBlink_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t devAttrMcuConfig_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrDtMode_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t mcuI2cRead_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrDtMode_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t mcuI2cRead_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrI2c_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t mcuI2cWrite_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t devAttrI2c_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
+static ssize_t devAttrSerialRs232Rs485Inv_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-static ssize_t devAttrAxMode_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrAxMode_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrUpsBatteryV_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrUpsBatteryV_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrSdEnabled_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrSdEnabled_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrMcuFwVersion_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrMcuConfig_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrWiegandEnabled_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandEnabled_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrWiegandData_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandNoise_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandPulseIntervalMin_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrWiegandPulseIntervalMax_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandPulseIntervalMax_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrWiegandPulseWidthMin_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandPulseWidthMin_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrWiegandPulseWidthMax_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t mcuI2cRead_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t mcuI2cRead_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t mcuI2cWrite_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
-
-static ssize_t devAttrSerialRs232Rs485Inv_show(struct device* dev,
-		struct device_attribute* attr, char *buf);
-
-static ssize_t devAttrSerialRs232Rs485Inv_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count);
+static ssize_t devAttrSerialRs232Rs485Inv_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
 static const char VALS_DIGITAL_OUTS_STATUS[] = { 4, '0', '1', 'F', 'S' };
 static const char VALS_WATCHDOG_ENABLE_MODE[] = { 2, 'D', 'A' };
@@ -237,93 +149,168 @@ static const char VALS_POWER_UP_MODE[] = { 2, 'M', 'A' };
 static const char VALS_SD_SDX_ROUTING[] = { 2, 'A', 'B' };
 static const char VALS_ANALOG_OUTS_MODE[] = { 2, 'I', 'V' };
 
-static bool dt1enabled = false;
-static bool dt2enabled = false;
-static bool dt3enabled = false;
-static bool dt4enabled = false;
-
 static uint8_t fwVerMajor;
 static uint8_t fwVerMinor;
 
-static struct WiegandBean w1 = {
-	.d0 = {
-		.gpio = GPIO_DT1,
-		.irqRequested = false,
-	},
-	.d1 = {
-		.gpio = GPIO_DT2,
-		.irqRequested = false,
-	},
-	.enabled = false,
-	.pulseWidthMin_usec = 10,
-	.pulseWidthMax_usec = 150,
-	.pulseIntervalMin_usec = 1200,
-	.pulseIntervalMax_usec = 2700,
-	.noise = 0,
-};
-
-static struct WiegandBean w2 = {
-	.d0 = {
-		.gpio = GPIO_DT3,
-		.irqRequested = false,
-	},
-	.d1 = {
-		.gpio = GPIO_DT4,
-		.irqRequested = false,
-	},
-	.enabled = false,
-	.pulseWidthMin_usec = 10,
-	.pulseWidthMax_usec = 150,
-	.pulseIntervalMin_usec = 1200,
-	.pulseIntervalMax_usec = 2700,
-	.noise = 0,
-};
-
-enum digital_in {
+enum digInEnum {
 	DI1 = 0,
 	DI2,
 	DI3,
 	DI4,
+	DI_SIZE,
 };
 
-static struct DebounceBean debounceBeans[] = {
+enum dtEnum {
+	DT1 = 0,
+	DT2,
+	DT3,
+	DT4,
+	DT_SIZE,
+};
+
+static struct DebouncedGpioBean gpioDI[] = {
 	[DI1] = {
-		.gpio = GPIO_DI1,
-		.debIrqDevName = "ionopimax_di1_deb",
-		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOnStateCnt = 0,
-		.debOffStateCnt = 0,
+		.gpio = {
+			.name = "ionopimax_di1",
+			.gpio = GPIO_DI1,
+			.mode = GPIO_MODE_IN,
+		},
 	},
-
 	[DI2] = {
-		.gpio = GPIO_DI2,
-		.debIrqDevName = "ionopimax_di2_deb",
-		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOnStateCnt = 0,
-		.debOffStateCnt = 0,
+		.gpio = {
+			.name = "ionopimax_di2",
+			.gpio = GPIO_DI2,
+			.mode = GPIO_MODE_IN,
+		},
 	},
-
 	[DI3] = {
-		.gpio = GPIO_DI3,
-		.debIrqDevName = "ionopimax_di3_deb",
-		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOnStateCnt = 0,
-		.debOffStateCnt = 0,
+		.gpio = {
+			.name = "ionopimax_di3",
+			.gpio = GPIO_DI3,
+			.mode = GPIO_MODE_IN,
+		},
 	},
-
 	[DI4] = {
-		.gpio = GPIO_DI4,
-		.debIrqDevName = "ionopimax_di4_deb",
-		.debOnMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOffMinTime_usec = DEBOUNCE_DEFAULT_TIME_USEC,
-		.debOnStateCnt = 0,
-		.debOffStateCnt = 0,
+		.gpio = {
+			.name = "ionopimax_di4",
+			.gpio = GPIO_DI4,
+			.mode = GPIO_MODE_IN,
+		},
 	},
+};
 
-	{ }
+static struct GpioBean gpioDT[] = {
+	[DT1] = {
+		.name = "ionopimax_dt1",
+		.gpio = GPIO_DT1,
+	},
+	[DT2] = {
+		.name = "ionopimax_dt2",
+		.gpio = GPIO_DT2,
+	},
+	[DT3] = {
+		.name = "ionopimax_dt3",
+		.gpio = GPIO_DT3,
+	},
+	[DT4] = {
+		.name = "ionopimax_dt4",
+		.gpio = GPIO_DT4,
+	},
+};
+
+static struct GpioBean gpioBuzzer = {
+	.name = "ionopimax_buzzer",
+	.gpio = GPIO_BUZZER,
+	.mode = GPIO_MODE_OUT,
+};
+
+static struct GpioBean gpioButton = {
+	.name = "ionopimax_button",
+	.gpio = GPIO_BUTTON,
+	.mode = GPIO_MODE_IN,
+	.invert = true,
+};
+
+static struct GpioBean gpioWdEn = {
+	.name = "ionopimax_wd_en",
+	.gpio = GPIO_WD_EN,
+	.mode = GPIO_MODE_OUT,
+};
+
+static struct GpioBean gpioWdHeartbeat = {
+	.name = "ionopimax_wd_hb",
+	.gpio = GPIO_WD_HEARTBEAT,
+	.mode = GPIO_MODE_OUT,
+};
+
+static struct GpioBean gpioWdExpired = {
+	.name = "ionopimax_wd_ex",
+	.gpio = GPIO_WD_EXPIRED,
+	.mode = GPIO_MODE_IN,
+};
+
+static struct GpioBean gpioPwrDnwEn = {
+	.name = "ionopimax_pwr_dwn",
+	.gpio = GPIO_PWR_DWN_EN,
+	.mode = GPIO_MODE_OUT,
+};
+
+static struct GpioBean gpioUsb1En = {
+	.name = "ionopimax_usb1_en",
+	.gpio = GPIO_USB1_EN,
+	.mode = GPIO_MODE_OUT,
+	.invert = true,
+};
+
+static struct GpioBean gpioUsb1Err = {
+	.name = "ionopimax_usb1_err",
+	.gpio = GPIO_USB1_ERR,
+	.mode = GPIO_MODE_IN,
+	.invert = true,
+};
+
+static struct GpioBean gpioUsb2En = {
+	.name = "ionopimax_usb2_en",
+	.gpio = GPIO_USB2_EN,
+	.mode = GPIO_MODE_OUT,
+	.invert = true,
+};
+
+static struct GpioBean gpioUsb2Err = {
+	.name = "ionopimax_usb2_err",
+	.gpio = GPIO_USB2_ERR,
+	.mode = GPIO_MODE_IN,
+	.invert = true,
+};
+
+static struct GpioBean gpioSwEn = {
+	.name = "ionopimax_sw_en",
+	.gpio = GPIO_SW_EN,
+	.mode = GPIO_MODE_OUT,
+};
+
+static struct GpioBean gpioSwReset = {
+	.name = "ionopimax_sw_rst",
+	.gpio = GPIO_SW_RESET,
+	.mode = GPIO_MODE_OUT,
+};
+
+static struct WiegandBean w1 = {
+	.d0 = {
+		.gpio = &gpioDT[DT1],
+	},
+	.d1 = {
+		.gpio = &gpioDT[DT2],
+	},
+};
+
+static struct WiegandBean w2 = {
+	.d0 = {
+		.gpio = &gpioDT[DT3],
+	},
+	.d1 = {
+		.gpio = &gpioDT[DT4],
+	},
 };
 
 static struct DeviceAttrBean devAttrBeansBuzzer[] = {
@@ -336,8 +323,7 @@ static struct DeviceAttrBean devAttrBeansBuzzer[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 40,
+		.gpio = &gpioBuzzer,
 	},
 
 	{
@@ -349,8 +335,7 @@ static struct DeviceAttrBean devAttrBeansBuzzer[] = {
 			.show = NULL,
 			.store = devAttrGpioBlink_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 40,
+		.gpio = &gpioBuzzer,
 	},
 
 	{ }
@@ -366,9 +351,7 @@ static struct DeviceAttrBean devAttrBeansButton[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = 38,
-		.invert = true,
+		.gpio = &gpioButton,
 	},
 
 	{ }
@@ -1229,10 +1212,10 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 				.name = "dt1_mode",
 				.mode = 0660,
 			},
-			.show = devAttrDtMode_show,
-			.store = devAttrDtMode_store,
+			.show = devAttrGpioMode_show,
+			.store = devAttrGpioMode_store,
 		},
-		.gpio = GPIO_DT1,
+		.gpio = &gpioDT[DT1],
 	},
 
 	{
@@ -1241,10 +1224,10 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 				.name = "dt2_mode",
 				.mode = 0660,
 			},
-			.show = devAttrDtMode_show,
-			.store = devAttrDtMode_store,
+			.show = devAttrGpioMode_show,
+			.store = devAttrGpioMode_store,
 		},
-		.gpio = GPIO_DT2,
+		.gpio = &gpioDT[DT2],
 	},
 
 	{
@@ -1253,10 +1236,10 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 				.name = "dt3_mode",
 				.mode = 0660,
 			},
-			.show = devAttrDtMode_show,
-			.store = devAttrDtMode_store,
+			.show = devAttrGpioMode_show,
+			.store = devAttrGpioMode_store,
 		},
-		.gpio = GPIO_DT3,
+		.gpio = &gpioDT[DT3],
 	},
 
 	{
@@ -1265,10 +1248,10 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 				.name = "dt4_mode",
 				.mode = 0660,
 			},
-			.show = devAttrDtMode_show,
-			.store = devAttrDtMode_store,
+			.show = devAttrGpioMode_show,
+			.store = devAttrGpioMode_store,
 		},
-		.gpio = GPIO_DT4,
+		.gpio = &gpioDT[DT4],
 	},
 
 	{
@@ -1280,8 +1263,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = 0,
-		.gpio = GPIO_DT1,
+		.gpio = &gpioDT[DT1],
 	},
 
 	{
@@ -1293,8 +1275,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = 0,
-		.gpio = GPIO_DT2,
+		.gpio = &gpioDT[DT2],
 	},
 
 	{
@@ -1306,8 +1287,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = 0,
-		.gpio = GPIO_DT3,
+		.gpio = &gpioDT[DT3],
 	},
 
 	{
@@ -1319,8 +1299,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIO[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = 0,
-		.gpio = GPIO_DT4,
+		.gpio = &gpioDT[DT4],
 	},
 
 	{ }
@@ -1336,8 +1315,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = GPIO_DI1,
+		.gpio = &gpioDI[DI1].gpio,
 	},
 
 	{
@@ -1349,8 +1327,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = GPIO_DI2,
+		.gpio = &gpioDI[DI2].gpio,
 	},
 
 	{
@@ -1362,8 +1339,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = GPIO_DI3,
+		.gpio = &gpioDI[DI3].gpio,
 	},
 
 	{
@@ -1375,8 +1351,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = GPIO_DI4,
+		.gpio = &gpioDI[DI4].gpio,
 	},
 
 	{
@@ -1388,7 +1363,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDeb_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI1],
+		.gpio = &gpioDI[DI1].gpio,
 	},
 
 	{
@@ -1400,7 +1375,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDeb_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI2],
+		.gpio = &gpioDI[DI2].gpio,
 	},
 
 	{
@@ -1412,7 +1387,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDeb_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI3],
+		.gpio = &gpioDI[DI3].gpio,
 	},
 
 	{
@@ -1424,7 +1399,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDeb_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI4],
+		.gpio = &gpioDI[DI4].gpio,
 	},
 
 	{
@@ -1436,7 +1411,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOn_show,
 			.store = devAttrGpioDebMsOn_store,
 		},
-		.debBean = &debounceBeans[DI1],
+		.gpio = &gpioDI[DI1].gpio,
 	},
 
 	{
@@ -1448,7 +1423,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOff_show,
 			.store = devAttrGpioDebMsOff_store,
 		},
-		.debBean = &debounceBeans[DI1],
+		.gpio = &gpioDI[DI1].gpio,
 	},
 
 	{
@@ -1460,7 +1435,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOn_show,
 			.store = devAttrGpioDebMsOn_store,
 		},
-		.debBean = &debounceBeans[DI2],
+		.gpio = &gpioDI[DI2].gpio,
 	},
 
 	{
@@ -1472,7 +1447,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOff_show,
 			.store = devAttrGpioDebMsOff_store,
 		},
-		.debBean = &debounceBeans[DI2],
+		.gpio = &gpioDI[DI2].gpio,
 	},
 
 	{
@@ -1484,7 +1459,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOn_show,
 			.store = devAttrGpioDebMsOn_store,
 		},
-		.debBean = &debounceBeans[DI3],
+		.gpio = &gpioDI[DI3].gpio,
 	},
 
 	{
@@ -1496,7 +1471,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOff_show,
 			.store = devAttrGpioDebMsOff_store,
 		},
-		.debBean = &debounceBeans[DI3],
+		.gpio = &gpioDI[DI3].gpio,
 	},
 
 	{
@@ -1508,7 +1483,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOn_show,
 			.store = devAttrGpioDebMsOn_store,
 		},
-		.debBean = &debounceBeans[DI4],
+		.gpio = &gpioDI[DI4].gpio,
 	},
 
 	{
@@ -1520,7 +1495,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebMsOff_show,
 			.store = devAttrGpioDebMsOff_store,
 		},
-		.debBean = &debounceBeans[DI4],
+		.gpio = &gpioDI[DI4].gpio,
 	},
 
 	{
@@ -1532,7 +1507,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOnCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI1],
+		.gpio = &gpioDI[DI1].gpio,
 	},
 
 	{
@@ -1544,7 +1519,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOffCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI1],
+		.gpio = &gpioDI[DI1].gpio,
 	},
 
 	{
@@ -1556,7 +1531,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOnCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI2],
+		.gpio = &gpioDI[DI2].gpio,
 	},
 
 	{
@@ -1568,7 +1543,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOffCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI2],
+		.gpio = &gpioDI[DI2].gpio,
 	},
 
 	{
@@ -1580,7 +1555,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOnCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI3],
+		.gpio = &gpioDI[DI3].gpio,
 	},
 
 	{
@@ -1592,7 +1567,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOffCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI3],
+		.gpio = &gpioDI[DI3].gpio,
 	},
 
 	{
@@ -1604,7 +1579,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOnCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI4],
+		.gpio = &gpioDI[DI4].gpio,
 	},
 
 	{
@@ -1616,7 +1591,7 @@ static struct DeviceAttrBean devAttrBeansDigitalIn[] = {
 			.show = devAttrGpioDebOffCnt_show,
 			.store = NULL,
 		},
-		.debBean = &debounceBeans[DI4],
+		.gpio = &gpioDI[DI4].gpio,
 	},
 
 	{ }
@@ -1976,8 +1951,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 39,
+		.gpio = &gpioWdEn,
 	},
 
 	{
@@ -1989,8 +1963,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 32,
+		.gpio = &gpioWdHeartbeat,
 	},
 
 	{
@@ -2002,8 +1975,7 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = 17,
+		.gpio = &gpioWdExpired,
 	},
 
 	{
@@ -2099,8 +2071,7 @@ static struct DeviceAttrBean devAttrBeansPower[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 18,
+		.gpio = &gpioPwrDnwEn,
 	},
 
 	{
@@ -2524,9 +2495,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 30,
-		.invert = true,
+		.gpio = &gpioUsb1En,
 	},
 
 	{
@@ -2538,9 +2507,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = 0,
-		.invert = true,
+		.gpio = &gpioUsb1Err,
 	},
 
 	{
@@ -2552,9 +2519,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = 31,
-		.invert = true,
+		.gpio = &gpioUsb2En,
 	},
 
 	{
@@ -2566,9 +2531,7 @@ static struct DeviceAttrBean devAttrBeansUsb[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpioMode = GPIO_MODE_IN,
-		.gpio = 1,
-		.invert = true,
+		.gpio = &gpioUsb2Err,
 	},
 
 	{ }
@@ -3444,8 +3407,7 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = GPIO_SW_EN,
+		.gpio = &gpioSwEn,
 	},
 
 	{
@@ -3457,8 +3419,7 @@ static struct DeviceAttrBean devAttrBeansMcu[] = {
 			.show = devAttrGpio_show,
 			.store = devAttrGpio_store,
 		},
-		.gpioMode = GPIO_MODE_OUT,
-		.gpio = GPIO_SW_RESET,
+		.gpio = &gpioSwReset,
 	},
 
 	{
@@ -3670,376 +3631,22 @@ struct ionopimax_i2c_data {
 	struct mutex update_lock;
 };
 
-static char toUpper(char c) {
-	if (c >= 97 && c <= 122) {
-		return c - 32;
-	}
-	return c;
-}
-
-static int gpioSetup(struct DeviceBean* db, struct DeviceAttrBean* dab) {
-	int result = 0;
-	char gpioReqName[128];
-	char *gpioReqNamePart;
-
-	strcpy(gpioReqName, "ionopimax_");
-	gpioReqNamePart = gpioReqName + strlen("ionopimax_");
-
-	strcpy(gpioReqNamePart, db->name);
-	gpioReqNamePart[strlen(db->name)] = '_';
-
-	strcpy(gpioReqNamePart + strlen(db->name) + 1, dab->devAttr.attr.name);
-
-	gpio_request(dab->gpio, gpioReqName);
-	if (dab->gpioMode == GPIO_MODE_OUT) {
-		result = gpio_direction_output(dab->gpio, false);
-	} else if (dab->gpioMode == GPIO_MODE_IN) {
-		result = gpio_direction_input(dab->gpio);
-	}
-
-	return result;
-}
-
-static struct DeviceBean* devGetBean(struct device* dev) {
-	int di;
-	di = 0;
-	while (devices[di].name != NULL) {
-		if (dev == devices[di].pDevice) {
-			return &devices[di];
-		}
-		di++;
-	}
-	return NULL;
-}
-
-static struct DeviceAttrBean* devAttrGetBean(struct DeviceBean* devBean,
-		struct device_attribute* attr) {
-	int ai;
-	if (devBean == NULL) {
+struct GpioBean* gpioGetBean(struct device *dev, struct device_attribute *attr) {
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
+	if (dab == NULL) {
 		return NULL;
 	}
-	ai = 0;
-	while (devBean->devAttrBeans[ai].devAttr.attr.name != NULL) {
-		if (attr == &devBean->devAttrBeans[ai].devAttr) {
-			return &devBean->devAttrBeans[ai];
-		}
-		ai++;
-	}
-	return NULL;
+	return dab->gpio;
 }
 
-static unsigned long long to_usec(struct timespec64 *t) {
-	return (t->tv_sec * 1000000) + (t->tv_nsec / 1000);
-}
-
-static unsigned long long diff_usec(struct timespec64 *t1, struct timespec64 *t2) {
-	struct timespec64 diff;
-	diff = timespec64_sub(*t2, *t1);
-	return to_usec(&diff);
-}
-
-static ssize_t devAttrGpio_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	int val;
-	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(devGetBean(dev), attr);
-	if (dab == NULL || dab->gpio < 0) {
-		return -EFAULT;
-	}
-	if (dab->gpioMode != GPIO_MODE_IN && dab->gpioMode != GPIO_MODE_OUT) {
-		return -EPERM;
-	}
-	val = gpio_get_value(dab->gpio);
-	if (dab->invert) {
-		val = val == 0 ? 1 : 0;
-	}
-	return sprintf(buf, "%d\n", val);
-}
-
-static ssize_t devAttrGpio_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	bool val;
-	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(devGetBean(dev), attr);
-	if (dab == NULL || dab->gpio < 0) {
-		return -EFAULT;
-	}
-	if (dab->gpioMode != GPIO_MODE_OUT) {
-		return -EPERM;
-	}
-	if (kstrtobool(buf, &val) < 0) {
-		if (toUpper(buf[0]) == 'E') { // Enable
-			val = true;
-		} else if (toUpper(buf[0]) == 'D') { // Disable
-			val = false;
-		} else if (toUpper(buf[0]) == 'F' || toUpper(buf[0]) == 'T') { // Flip/Toggle
-			val = gpio_get_value(dab->gpio) ==
-					(dab->invert ? 0 : 1) ? false : true;
-		} else {
-			return -EINVAL;
-		}
-	}
-	if (dab->invert) {
-		val = !val;
-	}
-	gpio_set_value(dab->gpio, val ? 1 : 0);
-	return count;
-}
-
-static ssize_t devAttrGpioDeb_show(struct device *dev,
-		struct device_attribute *attr, char *buf) {
-	struct timespec64 now;
-	unsigned long long diff;
-	int actualGPIOStatus;
-	struct DeviceAttrBean *dab;
-	int res;
-
-	ktime_get_raw_ts64(&now);
-	dab = container_of(attr, struct DeviceAttrBean, devAttr);
-	diff = diff_usec((struct timespec64*) &dab->debBean->lastDebIrqTs,
-			&now);
-	actualGPIOStatus = gpio_get_value(dab->debBean->gpio);
-	if (actualGPIOStatus) {
-		if (diff >= dab->debBean->debOnMinTime_usec) {
-			res = actualGPIOStatus;
-		} else {
-			res = dab->debBean->debValue;
-		}
+struct WiegandBean* wiegandGetBean(struct device *dev,
+		struct device_attribute *attr) {
+	if (attr->attr.name[1] == '1') {
+		return &w1;
 	} else {
-		if (diff >= dab->debBean->debOffMinTime_usec) {
-			res = actualGPIOStatus;
-		} else {
-			res = dab->debBean->debValue;
-		}
+		return &w2;
 	}
-	return sprintf(buf, "%d\n", res);
-}
-
-static ssize_t devAttrGpioDebMsOn_show(struct device *dev,
-		struct device_attribute *attr, char *buf) {
-	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
-			devAttr);
-
-	return sprintf(buf, "%lu\n",
-			dab->debBean->debOnMinTime_usec / 1000);
-}
-
-static ssize_t devAttrGpioDebMsOff_show(struct device *dev,
-		struct device_attribute *attr, char *buf) {
-	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
-			devAttr);
-
-	return sprintf(buf, "%lu\n",
-			dab->debBean->debOffMinTime_usec / 1000);
-}
-
-static ssize_t devAttrGpioDebMsOn_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count) {
-	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
-			devAttr);
-	unsigned int val;
-
-	int ret = kstrtouint(buf, 10, &val);
-	if (ret < 0) {
-		return ret;
-	}
-	dab->debBean->debOnMinTime_usec = val * 1000;
-	dab->debBean->debOnStateCnt = 0;
-	dab->debBean->debOffStateCnt = 0;
-	dab->debBean->debValue = DEBOUNCE_STATE_NOT_DEFINED;
-	return count;
-}
-
-static ssize_t devAttrGpioDebMsOff_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count) {
-	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
-			devAttr);
-	unsigned int val;
-
-	int ret = kstrtouint(buf, 10, &val);
-	if (ret < 0) {
-		return ret;
-	}
-	dab->debBean->debOffMinTime_usec = val * 1000;
-	dab->debBean->debOnStateCnt = 0;
-	dab->debBean->debOffStateCnt = 0;
-	dab->debBean->debValue = DEBOUNCE_STATE_NOT_DEFINED;
-	return count;
-}
-
-static ssize_t devAttrGpioDebOnCnt_show(struct device *dev,
-		struct device_attribute *attr, char *buf) {
-	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
-			devAttr);
-	struct timespec64 now;
-	unsigned long long diff;
-	int actualGPIOStatus;
-	unsigned long res;
-
-	ktime_get_raw_ts64(&now);
-	diff = diff_usec(
-			(struct timespec64*) &dab->debBean->lastDebIrqTs, &now);
-
-	actualGPIOStatus = gpio_get_value(dab->debBean->gpio);
-	if (dab->debBean->debPastValue == actualGPIOStatus
-			&& actualGPIOStatus
-			&& diff >= dab->debBean->debOnMinTime_usec
-			&& actualGPIOStatus != dab->debBean->debValue) {
-		res = dab->debBean->debOnStateCnt + 1;
-	} else {
-		res = dab->debBean->debOnStateCnt;
-	}
-
-	return sprintf(buf, "%lu\n", res);
-}
-
-static ssize_t devAttrGpioDebOffCnt_show(struct device *dev,
-		struct device_attribute *attr, char *buf) {
-	struct DeviceAttrBean* dab = container_of(attr, struct DeviceAttrBean,
-			devAttr);
-	struct timespec64 now;
-	unsigned long long diff;
-	int actualGPIOStatus;
-	unsigned long res;
-
-	ktime_get_raw_ts64(&now);
-	diff = diff_usec(
-			(struct timespec64*) &dab->debBean->lastDebIrqTs, &now);
-
-	actualGPIOStatus = gpio_get_value(dab->debBean->gpio);
-	if (dab->debBean->debPastValue == actualGPIOStatus
-			&& !actualGPIOStatus
-			&& diff >= dab->debBean->debOffMinTime_usec
-			&& actualGPIOStatus != dab->debBean->debValue) {
-		res = dab->debBean->debOffStateCnt + 1;
-	} else {
-		res = dab->debBean->debOffStateCnt;
-	}
-
-	return sprintf(buf, "%lu\n", res);
-}
-
-static ssize_t devAttrGpioBlink_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	int i;
-	struct DeviceAttrBean* dab;
-	long on = 0;
-	long off = 0;
-	long rep = 1;
-	char *end = NULL;
-	dab = devAttrGetBean(devGetBean(dev), attr);
-	if (dab == NULL || dab->gpioMode == 0) {
-		return -EFAULT;
-	}
-	if (dab->gpio < 0) {
-		return -EFAULT;
-	}
-	on = simple_strtol(buf, &end, 10);
-	if (++end < buf + count) {
-		off = simple_strtol(end, &end, 10);
-		if (++end < buf + count) {
-			rep = simple_strtol(end, NULL, 10);
-		}
-	}
-	if (rep < 1) {
-		rep = 1;
-	}
-	if (on > 0) {
-		for (i = 0; i < rep; i++) {
-			gpio_set_value(dab->gpio, dab->invert ? 0 : 1);
-			msleep(on);
-			gpio_set_value(dab->gpio, dab->invert ? 1 : 0);
-			if (i < rep - 1) {
-				msleep(off);
-			}
-		}
-	}
-	return count;
-}
-
-static ssize_t devAttrDtMode_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(devGetBean(dev), attr);
-	if (dab == NULL || dab->gpio < 0) {
-		return -EFAULT;
-	}
-	if (dab->gpioMode == GPIO_MODE_IN) {
-		return sprintf(buf, "in\n");
-	}
-	if (dab->gpioMode == GPIO_MODE_OUT) {
-		return sprintf(buf, "out\n");
-	}
-	return sprintf(buf, "x\n");
-}
-
-static ssize_t devAttrDtMode_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	size_t ret;
-	int ai;
-	bool* enabled;
-	struct DeviceBean* db;
-	struct DeviceAttrBean* dab;
-	db = devGetBean(dev);
-	dab = devAttrGetBean(db, attr);
-	if (dab == NULL) {
-		return -EFAULT;
-	}
-
-	if (dab->gpio == GPIO_DT1) {
-		if (w1.enabled) {
-			return -EBUSY;
-		}
-		enabled = &dt1enabled;
-	} else if (dab->gpio == GPIO_DT2) {
-		if (w1.enabled) {
-			return -EBUSY;
-		}
-		enabled = &dt2enabled;
-	} else if (dab->gpio == GPIO_DT3) {
-		if (w2.enabled) {
-			return -EBUSY;
-		}
-		enabled = &dt3enabled;
-	} else if (dab->gpio == GPIO_DT4) {
-		if (w2.enabled) {
-			return -EBUSY;
-		}
-		enabled = &dt4enabled;
-	} else {
-		return -EFAULT;
-	}
-
-	if (toUpper(buf[0]) == 'I') {
-		dab->gpioMode = GPIO_MODE_IN;
-	} else if (toUpper(buf[0]) == 'O') {
-		dab->gpioMode = GPIO_MODE_OUT;
-	} else {
-		dab->gpioMode = 0;
-	}
-
-	ret = count;
-	gpio_free(dab->gpio);
-	if (dab->gpioMode != 0) {
-		(*enabled) = true;
-		if (gpioSetup(db, dab)) {
-			dab->gpioMode = 0;
-			gpio_free(dab->gpio);
-			ret = -EFAULT;
-		}
-	} else {
-		(*enabled) = false;
-	}
-
-	ai = 0;
-	while (db->devAttrBeans[ai].devAttr.attr.name != NULL) {
-		if (db->devAttrBeans[ai].gpio == dab->gpio) {
-			db->devAttrBeans[ai].gpioMode = dab->gpioMode;
-		}
-		ai++;
-	}
-
-	return ret;
 }
 
 static bool ionopimax_i2c_lock(void) {
@@ -4245,11 +3852,12 @@ static int32_t ionopimax_i2c_write_segment(uint8_t reg, bool maskedReg,
 	return res;
 }
 
-static ssize_t devAttrI2c_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
+static ssize_t devAttrI2c_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
 	int32_t res;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -4288,15 +3896,16 @@ static ssize_t devAttrI2c_show(struct device* dev,
 	}
 }
 
-static ssize_t devAttrI2c_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t devAttrI2c_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	long val;
 	int ret;
 	uint16_t i;
 	int32_t res;
 	char valC;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -4331,7 +3940,8 @@ static ssize_t devAttrI2c_store(struct device* dev,
 		return -EINVAL;
 	}
 
-	res = ionopimax_i2c_write_segment((uint8_t) specs->reg, specs->maskedReg,
+	res = ionopimax_i2c_write_segment((uint8_t) specs->reg,
+			specs->maskedReg,
 			specs->mask, specs->shift, (uint16_t) val);
 
 	if (res < 0) {
@@ -4341,11 +3951,12 @@ static ssize_t devAttrI2c_store(struct device* dev,
 	return count;
 }
 
-static ssize_t devAttrAxMode_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
+static ssize_t devAttrAxMode_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
 	int32_t res;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -4355,7 +3966,8 @@ static ssize_t devAttrAxMode_show(struct device* dev,
 	}
 
 	if (fwVerMajor > 1 || fwVerMinor >= 3) {
-		res = ionopimax_i2c_read_segment((uint8_t) specs->reg + 1, specs->len,
+		res = ionopimax_i2c_read_segment((uint8_t) specs->reg + 1,
+				specs->len,
 				specs->mask, specs->shift - 4);
 
 		if (res < 0) {
@@ -4380,13 +3992,14 @@ static ssize_t devAttrAxMode_show(struct device* dev,
 	return sprintf(buf, "B\n");
 }
 
-static ssize_t devAttrAxMode_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t devAttrAxMode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	int32_t res;
 	char valC;
 	uint16_t en, mode;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -4416,7 +4029,8 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 
 	if (fwVerMajor > 1 || fwVerMinor >= 3) {
 		res = ionopimax_i2c_write_segment((uint8_t) specs->reg + 1,
-				specs->maskedReg, specs->mask, specs->shift - 4, (uint16_t) en);
+				specs->maskedReg, specs->mask, specs->shift - 4,
+				(uint16_t) en);
 
 		if (res < 0) {
 			return res;
@@ -4425,7 +4039,8 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 
 	if (mode != 0xff) {
 		res = ionopimax_i2c_write_segment((uint8_t) specs->reg,
-				specs->maskedReg, specs->mask, specs->shift, (uint16_t) mode);
+				specs->maskedReg, specs->mask, specs->shift,
+				(uint16_t) mode);
 
 		if (res < 0) {
 			return res;
@@ -4435,8 +4050,8 @@ static ssize_t devAttrAxMode_store(struct device* dev,
 	return count;
 }
 
-static ssize_t devAttrUpsBatteryV_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
+static ssize_t devAttrUpsBatteryV_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
 	int32_t res;
 	res = devAttrI2c_show(dev, attr, buf);
 	if (res < 0) {
@@ -4449,8 +4064,8 @@ static ssize_t devAttrUpsBatteryV_show(struct device* dev,
 	}
 }
 
-static ssize_t devAttrUpsBatteryV_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t devAttrUpsBatteryV_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	int ret;
 	long val;
 	char buf2[2];
@@ -4474,11 +4089,12 @@ static ssize_t devAttrUpsBatteryV_store(struct device* dev,
 	return count;
 }
 
-static ssize_t devAttrSdEnabled_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
+static ssize_t devAttrSdEnabled_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
 	int32_t res;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -4513,13 +4129,14 @@ static ssize_t devAttrSdEnabled_show(struct device* dev,
 	}
 }
 
-static ssize_t devAttrSdEnabled_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t devAttrSdEnabled_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	long val;
 	int ret;
 	int32_t res;
 	struct DeviceAttrRegSpecs *specs;
-	struct DeviceAttrBean* dab = devAttrGetBean(devGetBean(dev), attr);
+	struct DeviceAttrBean *dab;
+	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
 		return -EFAULT;
 	}
@@ -4548,399 +4165,13 @@ static ssize_t devAttrSdEnabled_store(struct device* dev,
 		}
 	}
 
-	res = ionopimax_i2c_write_segment((uint8_t) specs->reg, specs->maskedReg,
+	res = ionopimax_i2c_write_segment((uint8_t) specs->reg,
+			specs->maskedReg,
 			specs->mask, specs->shift, (uint16_t) val);
 
 	if (res < 0) {
 		return res;
 	}
-
-	return count;
-}
-
-static struct WiegandBean* getWiegandBean(struct device* dev,
-		struct device_attribute* attr) {
-	struct DeviceAttrBean* dab;
-	dab = devAttrGetBean(devGetBean(dev), attr);
-	if (dab->devAttr.attr.name[1] == '1') {
-		return &w1;
-	} else {
-		return &w2;
-	}
-}
-
-static ssize_t devAttrWiegandEnabled_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-	return sprintf(buf, w->enabled ? "1\n" : "0\n");
-}
-
-static void wiegandReset(struct WiegandBean* w) {
-	w->enabled = true;
-	w->data = 0;
-	w->bitCount = 0;
-	w->activeLine = NULL;
-	w->d0.wasLow = false;
-	w->d1.wasLow = false;
-}
-
-static irq_handler_t wiegandDataIrqHandler(unsigned int irq, void *dev_id,
-		struct pt_regs *regs) {
-	bool isLow;
-	struct timespec64 now;
-	unsigned long long diff;
-	struct WiegandBean* w;
-	struct WiegandLine* l = NULL;
-
-	if (w1.enabled) {
-		if (irq == w1.d0.irq) {
-			w = &w1;
-			l = &w1.d0;
-		} else if (irq == w1.d1.irq) {
-			w = &w1;
-			l = &w1.d1;
-		}
-	}
-
-	if (w2.enabled) {
-		if (irq == w2.d0.irq) {
-			w = &w2;
-			l = &w2.d0;
-		} else if (irq == w2.d1.irq) {
-			w = &w2;
-			l = &w2.d1;
-		}
-	}
-
-	if (l == NULL) {
-		return (irq_handler_t) IRQ_HANDLED;
-	}
-
-	isLow = gpio_get_value(l->gpio) == 0;
-
-	ktime_get_raw_ts64(&now);
-
-	if (l->wasLow == isLow) {
-		// got the interrupt but didn't change state. Maybe a fast pulse
-		if (w->noise == 0) {
-			w->noise = 10;
-		}
-		return (irq_handler_t) IRQ_HANDLED;
-	}
-
-	l->wasLow = isLow;
-
-	if (isLow) {
-		if (w->bitCount != 0) {
-			diff = diff_usec((struct timespec64 *) &(w->lastBitTs), &now);
-
-			if (diff < w->pulseIntervalMin_usec) {
-				// pulse too early
-				w->noise = 11;
-				goto noise;
-			}
-
-			if (diff > w->pulseIntervalMax_usec) {
-				w->data = 0;
-				w->bitCount = 0;
-			}
-		}
-
-		if (w->activeLine != NULL) {
-			// there's movement on both lines
-			w->noise = 12;
-			goto noise;
-		}
-
-		w->activeLine = l;
-
-		w->lastBitTs.tv_sec = now.tv_sec;
-		w->lastBitTs.tv_nsec = now.tv_nsec;
-
-	} else {
-		if (w->activeLine != l) {
-			// there's movement on both lines or previous noise
-			w->noise = 13;
-			goto noise;
-		}
-
-		w->activeLine = NULL;
-
-		if (w->bitCount >= WIEGAND_MAX_BITS) {
-			return (irq_handler_t) IRQ_HANDLED;
-		}
-
-		diff = diff_usec((struct timespec64 *) &(w->lastBitTs), &now);
-		if (diff < w->pulseWidthMin_usec) {
-			// pulse too short
-			w->noise = 14;
-			goto noise;
-		}
-		if (diff > w->pulseWidthMax_usec) {
-			// pulse too long
-			w->noise = 15;
-			goto noise;
-		}
-
-		w->data <<= 1;
-		if (l == &w->d1) {
-			w->data |= 1;
-		}
-		w->bitCount++;
-	}
-
-	return (irq_handler_t) IRQ_HANDLED;
-
-	noise:
-	wiegandReset(w);
-	return (irq_handler_t) IRQ_HANDLED;
-}
-
-static void wiegandDisable(struct WiegandBean* w) {
-	if (w->enabled) {
-		gpio_free(w->d0.gpio);
-		gpio_free(w->d1.gpio);
-
-		if (w->d0.irqRequested) {
-			free_irq(w->d0.irq, NULL);
-			w->d0.irqRequested = false;
-		}
-
-		if (w->d1.irqRequested) {
-			free_irq(w->d1.irq, NULL);
-			w->d1.irqRequested = false;
-		}
-
-		w->enabled = false;
-	}
-}
-
-static ssize_t devAttrWiegandEnabled_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	struct WiegandBean* w;
-	bool enable;
-	bool isW1;
-	int result = 0;
-	char reqName[] = "ionopimax_wN_dN";
-
-	w = getWiegandBean(dev, attr);
-
-	if (buf[0] == '0') {
-		enable = false;
-	} else if (buf[0] == '1') {
-		enable = true;
-	} else {
-		return -EINVAL;
-	}
-
-	if (enable) {
-		isW1 = w == &w1;
-		if (isW1) {
-			if (dt1enabled || dt2enabled) {
-				return -EBUSY;
-			}
-			reqName[11] = '1';
-		} else {
-			if (dt3enabled || dt4enabled) {
-				return -EBUSY;
-			}
-			reqName[11] = '2';
-		}
-
-		reqName[14] = '0';
-		gpio_request(w->d0.gpio, reqName);
-		reqName[14] = '1';
-		gpio_request(w->d1.gpio, reqName);
-
-		result = gpio_direction_input(w->d0.gpio);
-		if (!result) {
-			result = gpio_direction_input(w->d1.gpio);
-		}
-
-		if (result) {
-			printk(
-			KERN_ALERT "ionopimax: * | error setting up wiegand GPIOs\n");
-			enable = false;
-		} else {
-			gpio_set_debounce(w->d0.gpio, 0);
-			gpio_set_debounce(w->d1.gpio, 0);
-
-			w->d0.irq = gpio_to_irq(w->d0.gpio);
-			w->d1.irq = gpio_to_irq(w->d1.gpio);
-
-			reqName[14] = '0';
-			result = request_irq(w->d0.irq,
-					(irq_handler_t) wiegandDataIrqHandler,
-					IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-					reqName, NULL);
-
-			if (result) {
-				printk(
-						KERN_ALERT "ionopimax: * | error registering wiegand D0 irq handler\n");
-				enable = false;
-			} else {
-				w->d0.irqRequested = true;
-
-				reqName[14] = '1';
-				result = request_irq(w->d1.irq,
-						(irq_handler_t) wiegandDataIrqHandler,
-						IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-						reqName, NULL);
-
-				if (result) {
-					printk(
-							KERN_ALERT "ionopimax: * | error registering wiegand D1 irq handler\n");
-					enable = false;
-				} else {
-					w->d1.irqRequested = true;
-				}
-			}
-		}
-	}
-
-	if (enable) {
-		w->noise = 0;
-		wiegandReset(w);
-	} else {
-		wiegandDisable(w);
-	}
-
-	if (result) {
-		return result;
-	}
-	return count;
-}
-
-static ssize_t devAttrWiegandData_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct timespec64 now;
-	unsigned long long diff;
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	if (!w->enabled) {
-		return -ENODEV;
-	}
-
-	ktime_get_raw_ts64(&now);
-	diff = diff_usec((struct timespec64 *) &(w->lastBitTs), &now);
-	if (diff <= w->pulseIntervalMax_usec) {
-		return -EBUSY;
-	}
-
-	return sprintf(buf, "%llu %d %llu\n", to_usec(&w->lastBitTs), w->bitCount,
-			w->data);
-}
-
-static ssize_t devAttrWiegandNoise_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct WiegandBean* w;
-	int noise;
-	w = getWiegandBean(dev, attr);
-	noise = w->noise;
-
-	w->noise = 0;
-
-	return sprintf(buf, "%d\n", noise);
-}
-
-static ssize_t devAttrWiegandPulseIntervalMin_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	return sprintf(buf, "%lu\n", w->pulseIntervalMin_usec);
-}
-
-static ssize_t devAttrWiegandPulseIntervalMin_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	int ret;
-	unsigned long val;
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	ret = kstrtol(buf, 10, &val);
-	if (ret < 0) {
-		return ret;
-	}
-
-	w->pulseIntervalMin_usec = val;
-
-	return count;
-}
-
-static ssize_t devAttrWiegandPulseIntervalMax_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	return sprintf(buf, "%lu\n", w->pulseIntervalMax_usec);
-}
-
-static ssize_t devAttrWiegandPulseIntervalMax_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	int ret;
-	unsigned long val;
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	ret = kstrtol(buf, 10, &val);
-	if (ret < 0) {
-		return ret;
-	}
-
-	w->pulseIntervalMax_usec = val;
-
-	return count;
-}
-
-static ssize_t devAttrWiegandPulseWidthMin_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	return sprintf(buf, "%lu\n", w->pulseWidthMin_usec);
-}
-
-static ssize_t devAttrWiegandPulseWidthMin_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	int ret;
-	unsigned long val;
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	ret = kstrtol(buf, 10, &val);
-	if (ret < 0) {
-		return ret;
-	}
-
-	w->pulseWidthMin_usec = val;
-
-	return count;
-}
-
-static ssize_t devAttrWiegandPulseWidthMax_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	return sprintf(buf, "%lu\n", w->pulseWidthMax_usec);
-}
-
-static ssize_t devAttrWiegandPulseWidthMax_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
-	int ret;
-	unsigned long val;
-	struct WiegandBean* w;
-	w = getWiegandBean(dev, attr);
-
-	ret = kstrtol(buf, 10, &val);
-	if (ret < 0) {
-		return ret;
-	}
-
-	w->pulseWidthMax_usec = val;
 
 	return count;
 }
@@ -4959,8 +4190,8 @@ static ssize_t getFwVersion(void) {
 	return 0;
 }
 
-static ssize_t devAttrMcuFwVersion_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
+static ssize_t devAttrMcuFwVersion_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
 	int32_t res;
 
 	res = getFwVersion();
@@ -4971,8 +4202,8 @@ static ssize_t devAttrMcuFwVersion_show(struct device* dev,
 	return sprintf(buf, "%d.%d\n", fwVerMajor, fwVerMinor);
 }
 
-static ssize_t devAttrMcuConfig_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t devAttrMcuConfig_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	int32_t res;
 	uint32_t val;
 	uint16_t i;
@@ -5013,13 +4244,13 @@ static ssize_t devAttrMcuConfig_store(struct device* dev,
 
 static int32_t mcuI2cReadVal;
 
-static ssize_t mcuI2cRead_show(struct device* dev,
-		struct device_attribute* attr, char *buf) {
+static ssize_t mcuI2cRead_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
 	return sprintf(buf, "0x%04x\n", mcuI2cReadVal);
 }
 
-static ssize_t mcuI2cRead_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t mcuI2cRead_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	int ret;
 	long reg;
 	ret = kstrtol(buf, 10, &reg);
@@ -5036,8 +4267,8 @@ static ssize_t mcuI2cRead_store(struct device* dev,
 	return count;
 }
 
-static ssize_t mcuI2cWrite_store(struct device* dev,
-		struct device_attribute* attr, const char *buf, size_t count) {
+static ssize_t mcuI2cWrite_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
 	long reg = 0;
 	long val = 0;
 	char *end = NULL;
@@ -5245,7 +4476,8 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 
 	ionopimax_i2c_client = client;
 
-	printk(KERN_INFO "ionopimax: - | i2c probe addr=0x%02hx\n", client->addr);
+	printk(KERN_INFO "ionopimax: - | i2c probe addr=0x%02hx\n",
+			client->addr);
 
 	return 0;
 }
@@ -5254,7 +4486,8 @@ static int ionopimax_i2c_remove(struct i2c_client *client) {
 	struct ionopimax_i2c_data *data = i2c_get_clientdata(client);
 	mutex_destroy(&data->update_lock);
 
-	printk(KERN_INFO "ionopimax: - | i2c remove addr=0x%02hx\n", client->addr);
+	printk(KERN_INFO "ionopimax: - | i2c remove addr=0x%02hx\n",
+			client->addr);
 
 	return 0;
 }
@@ -5263,13 +4496,13 @@ const struct of_device_id ionopimax_of_match[] = {
 	{ .compatible = "sferalabs,ionopimax", },
 	{ },
 };
-MODULE_DEVICE_TABLE(of, ionopimax_of_match);
+MODULE_DEVICE_TABLE( of, ionopimax_of_match);
 
 static const struct i2c_device_id ionopimax_i2c_id[] = {
 	{ "ionopimax", 0 },
 	{ },
 };
-MODULE_DEVICE_TABLE(i2c, ionopimax_i2c_id);
+MODULE_DEVICE_TABLE( i2c, ionopimax_i2c_id);
 
 static struct i2c_driver ionopimax_i2c_driver = {
 	.driver = {
@@ -5282,73 +4515,21 @@ static struct i2c_driver ionopimax_i2c_driver = {
 	.id_table = ionopimax_i2c_id,
 };
 
-static irqreturn_t gpio_deb_irq_handler(int irq, void *dev_id) {
-	struct timespec64 now;
-	int db = 0;
-	unsigned long long diff;
-	int actualGPIOStatus;
-
-	ktime_get_raw_ts64(&now);
-
-	while (debounceBeans[db].debIrqDevName != NULL) {
-		if (debounceBeans[db].debIrqNum == irq && debounceBeans[db].gpio != 0) {
-			actualGPIOStatus = gpio_get_value(debounceBeans[db].gpio);
-
-			diff = diff_usec(
-					(struct timespec64*) &debounceBeans[db].lastDebIrqTs, &now);
-
-			if (debounceBeans[db].debPastValue == actualGPIOStatus) {
-				return IRQ_HANDLED;
-			}
-
-			debounceBeans[db].debPastValue = actualGPIOStatus;
-
-			if (actualGPIOStatus == debounceBeans[db].debValue
-					|| debounceBeans[db].debValue == DEBOUNCE_STATE_NOT_DEFINED) {
-				if (actualGPIOStatus) {
-					if (diff >= debounceBeans[db].debOffMinTime_usec) {
-						debounceBeans[db].debValue = 0;
-						debounceBeans[db].debOffStateCnt++;
-					}
-				} else {
-					if (diff >= debounceBeans[db].debOnMinTime_usec) {
-						debounceBeans[db].debValue = 1;
-						debounceBeans[db].debOnStateCnt++;
-					}
-				}
-			}
-
-			debounceBeans[db].lastDebIrqTs = now;
-			break;
-		}
-		db++;
-	}
-
-	return IRQ_HANDLED;
-}
-
 static void cleanup(void) {
-	int di, ai;
+	struct DeviceBean *db;
+	struct DeviceAttrBean *dab;
+	int i, di, ai;
 
 	i2c_del_driver(&ionopimax_i2c_driver);
-
-	gpio_free(GPIO_SW_RESET);
-	gpio_free(GPIO_SW_EN);
 
 	di = 0;
 	while (devices[di].name != NULL) {
 		if (devices[di].pDevice && !IS_ERR(devices[di].pDevice)) {
+			db = &devices[di];
 			ai = 0;
-			while (devices[di].devAttrBeans[ai].devAttr.attr.name != NULL) {
-				device_remove_file(devices[di].pDevice,
-						&devices[di].devAttrBeans[ai].devAttr);
-				if (devices[di].devAttrBeans[ai].gpioMode != 0) {
-					gpio_free(devices[di].devAttrBeans[ai].gpio);
-				}
-				if (devices[di].devAttrBeans[ai].debBean != NULL) {
-					free_irq(devices[di].devAttrBeans[ai].debBean->debIrqNum,
-					NULL);
-				}
+			while (db->devAttrBeans[ai].devAttr.attr.name != NULL) {
+				dab = &db->devAttrBeans[ai];
+				device_remove_file(db->pDevice, &dab->devAttr);
 				ai++;
 			}
 		}
@@ -5362,16 +4543,108 @@ static void cleanup(void) {
 
 	wiegandDisable(&w1);
 	wiegandDisable(&w2);
+
+	for (i = 0; i < DI_SIZE; i++) {
+		gpioFreeDebounce(&gpioDI[i]);
+	}
+	for (i = 0; i < DT_SIZE; i++) {
+		gpioFree(&gpioDT[i]);
+	}
+	gpioFree(&gpioBuzzer);
+	gpioFree(&gpioButton);
+	gpioFree(&gpioWdEn);
+	gpioFree(&gpioWdHeartbeat);
+	gpioFree(&gpioWdExpired);
+	gpioFree(&gpioPwrDnwEn);
+	gpioFree(&gpioUsb1En);
+	gpioFree(&gpioUsb1Err);
+	gpioFree(&gpioUsb2En);
+	gpioFree(&gpioUsb2Err);
+	gpioFree(&gpioSwEn);
+	gpioFree(&gpioSwReset);
 }
 
 static int __init ionopimax_init(void) {
-	int result = 0;
-	int di, ai;
+	struct DeviceBean *db;
+	struct DeviceAttrBean *dab;
+	int i, di, ai;
 
 	printk(KERN_INFO "ionopimax: - | init\n");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
+
 	ateccAddDriver();
+
+	for (i = 0; i < DI_SIZE; i++) {
+		if (gpioInitDebounce(&gpioDI[i])) {
+			pr_alert("ionopimax: * | error setting up GPIO %d\n",
+					gpioDI[i].gpio.gpio);
+			goto fail;
+		}
+	}
+	if (gpioInit(&gpioBuzzer)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioBuzzer.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioButton)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioButton.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioWdEn)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioWdEn.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioWdHeartbeat)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioWdHeartbeat.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioWdExpired)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioWdExpired.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioPwrDnwEn)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioPwrDnwEn.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioUsb1En)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioUsb1En.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioUsb1Err)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioUsb1Err.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioUsb2En)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioUsb2En.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioUsb2Err)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioUsb2Err.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioSwEn)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioSwEn.gpio);
+		goto fail;
+	}
+	if (gpioInit(&gpioSwReset)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioSwReset.gpio);
+		goto fail;
+	}
+
+	gpioSetVal(&gpioSwEn, 0);
+	gpioSetVal(&gpioSwReset, 1);
+
+	wiegandInit(&w1);
+	wiegandInit(&w2);
 
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
 	if (IS_ERR(pDeviceClass)) {
@@ -5381,73 +4654,32 @@ static int __init ionopimax_init(void) {
 
 	di = 0;
 	while (devices[di].name != NULL) {
-		devices[di].pDevice = device_create(pDeviceClass, NULL, 0, NULL,
-				devices[di].name);
-		if (IS_ERR(devices[di].pDevice)) {
-			printk(KERN_ALERT "ionopimax: * | failed to create device '%s'\n",
-					devices[di].name);
+		db = &devices[di];
+		db->pDevice = device_create(pDeviceClass, NULL, 0, NULL, db->name);
+		if (IS_ERR(db->pDevice)) {
+			pr_alert("ionopi: * | failed to create device '%s'\n", db->name);
 			goto fail;
 		}
 
 		ai = 0;
-		while (devices[di].devAttrBeans[ai].devAttr.attr.name != NULL) {
-			result = device_create_file(devices[di].pDevice,
-					&devices[di].devAttrBeans[ai].devAttr);
-			if (result) {
-				printk(
-						KERN_ALERT "ionopimax: * | failed to create device file '%s/%s'\n",
-						devices[di].name,
-						devices[di].devAttrBeans[ai].devAttr.attr.name);
+		while (db->devAttrBeans[ai].devAttr.attr.name != NULL) {
+			dab = &db->devAttrBeans[ai];
+			if (device_create_file(db->pDevice, &dab->devAttr)) {
+				pr_alert("ionopi: * | failed to create device file '%s/%s'\n",
+						db->name, dab->devAttr.attr.name);
 				goto fail;
-			}
-			if (devices[di].devAttrBeans[ai].gpioMode != 0) {
-				result = gpioSetup(&devices[di], &devices[di].devAttrBeans[ai]);
-				if (result) {
-					printk(
-					KERN_ALERT "ionopimax: * | error setting up GPIO %d\n",
-							devices[di].devAttrBeans[ai].gpio);
-					goto fail;
-				}
-			}
-			if (devices[di].devAttrBeans[ai].debBean != NULL) {
-				if (!devices[di].devAttrBeans[ai].debBean->debIrqNum) {
-					devices[di].devAttrBeans[ai].debBean->debIrqNum =
-							gpio_to_irq(
-									devices[di].devAttrBeans[ai].debBean->gpio);
-					if (request_irq(
-							devices[di].devAttrBeans[ai].debBean->debIrqNum,
-							(void *) gpio_deb_irq_handler,
-							IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-							devices[di].devAttrBeans[ai].debBean->debIrqDevName,
-							NULL)) {
-						printk(
-								KERN_ALERT "ionopimax: * | cannot register IRQ of %s in device %s\n",
-								devices[di].devAttrBeans[ai].devAttr.attr.name,
-								devices[di].name);
-						goto fail;
-					}
-					ktime_get_raw_ts64(
-							&devices[di].devAttrBeans[ai].debBean->lastDebIrqTs);
-					devices[di].devAttrBeans[ai].debBean->debValue =
-					DEBOUNCE_STATE_NOT_DEFINED;
-					devices[di].devAttrBeans[ai].debBean->debPastValue =
-							gpio_get_value(
-									devices[di].devAttrBeans[ai].debBean->gpio);
-				}
 			}
 			ai++;
 		}
 		di++;
 	}
 
-	gpio_set_value(GPIO_SW_EN, 0);
-	gpio_set_value(GPIO_SW_RESET, 1);
-
 	if (getFwVersion() < 0) {
 		goto fail;
 	}
 
-	printk(KERN_INFO "ionopimax: - | ready FW%d.%d\n", fwVerMajor, fwVerMinor);
+	printk(KERN_INFO "ionopimax: - | ready FW%d.%d\n", fwVerMajor,
+			fwVerMinor);
 	return 0;
 
 	fail:
@@ -5461,5 +4693,5 @@ static void __exit ionopimax_exit(void) {
 	printk(KERN_INFO "ionopimax: - | exit\n");
 }
 
-module_init(ionopimax_init);
-module_exit(ionopimax_exit);
+module_init( ionopimax_init);
+module_exit( ionopimax_exit);

@@ -1,6 +1,9 @@
 obj-m += ionopimax.o
 
 ionopimax-objs := module.o
+ionopimax-objs += commons/commons.o
+ionopimax-objs += gpio/gpio.o
+ionopimax-objs += wiegand/wiegand.o
 ionopimax-objs += atecc/atecc.o
 
 all:
