@@ -96,6 +96,10 @@ This allows to have a different configuration during the boot up phase, even aft
 |----|:---:|:-:|-----------|
 |status|R|0|Button released|
 |status|R|1|Button pressed|
+|status_deb<sup>([pollable](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/poll-sysfs-files.md))</sup>|R|0|Button debounced state released|
+|status_deb<sup>([pollable](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/poll-sysfs-files.md))</sup>|R|1|Button debounced state pressed|
+|status_deb_ms|R/W|&lt;val&gt;|Button debounce time in milliseconds. Default: 50|
+|status_deb_cnt|R/W|&lt;val&gt;|Button debounced presses count. Rolls back to 0 after 4294967295|
 
 ### Buzzer - `/sys/class/ionopimax/buzzer/`
 
@@ -218,8 +222,8 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |enabled|R/W|0|Watchdog disabled|
 |enabled|R/W|1|Watchdog enabled|
 |enabled|W|F|Flip watchdog enabled state|
-|expired|R|0|Watchdog timeout not expired|
-|expired|R|1|Watchdog timeout expired|
+|expired<sup>([pollable](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/poll-sysfs-files.md))</sup>|R|0|Watchdog timeout not expired|
+|expired<sup>([pollable](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/poll-sysfs-files.md))</sup>|R|1|Watchdog timeout expired|
 |heartbeat|W|0|Set watchdog heartbeat line low|
 |heartbeat|W|1|Set watchdog heartbeat line high|
 |heartbeat|W|F|Flip watchdog heartbeat state|
