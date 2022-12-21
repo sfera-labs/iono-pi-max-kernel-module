@@ -57,7 +57,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.10");
+MODULE_VERSION("1.11");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -67,19 +67,6 @@ struct DeviceAttrRegSpecs {
 	uint8_t shift;
 	bool sign;
 	const char *vals;
-};
-
-struct DebounceBean {
-	int gpio;
-	const char *debIrqDevName;
-	int debValue;
-	int debPastValue;
-	int debIrqNum;
-	struct timespec64 lastDebIrqTs;
-	unsigned long debOnMinTime_usec;
-	unsigned long debOffMinTime_usec;
-	unsigned long debOnStateCnt;
-	unsigned long debOffStateCnt;
 };
 
 struct DeviceAttrBean {
@@ -224,11 +211,13 @@ static struct GpioBean gpioBuzzer = {
 	.mode = GPIO_MODE_OUT,
 };
 
-static struct GpioBean gpioButton = {
-	.name = "ionopimax_button",
-	.gpio = GPIO_BUTTON,
-	.mode = GPIO_MODE_IN,
-	.invert = true,
+static struct DebouncedGpioBean gpioButton = {
+	.gpio = {
+		.name = "ionopimax_button",
+		.gpio = GPIO_BUTTON,
+		.mode = GPIO_MODE_IN,
+		.invert = true,
+	},
 };
 
 static struct GpioBean gpioWdEn = {
@@ -243,10 +232,12 @@ static struct GpioBean gpioWdHeartbeat = {
 	.mode = GPIO_MODE_OUT,
 };
 
-static struct GpioBean gpioWdExpired = {
-	.name = "ionopimax_wd_ex",
-	.gpio = GPIO_WD_EXPIRED,
-	.mode = GPIO_MODE_IN,
+static struct DebouncedGpioBean gpioWdExpired = {
+	.gpio = {
+		.name = "ionopimax_wd_ex",
+		.gpio = GPIO_WD_EXPIRED,
+		.mode = GPIO_MODE_IN,
+	},
 };
 
 static struct GpioBean gpioPwrDnwEn = {
@@ -351,7 +342,43 @@ static struct DeviceAttrBean devAttrBeansButton[] = {
 			.show = devAttrGpio_show,
 			.store = NULL,
 		},
-		.gpio = &gpioButton,
+		.gpio = &gpioButton.gpio,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "status_deb",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDeb_show,
+			.store = NULL,
+		},
+		.gpio = &gpioButton.gpio,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "status_deb_ms",
+				.mode = 0660,
+			},
+			.show = devAttrGpioDebMsOn_show,
+			.store = devAttrGpioDebMsOn_store,
+		},
+		.gpio = &gpioButton.gpio,
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "status_deb_cnt",
+				.mode = 0440,
+			},
+			.show = devAttrGpioDebOnCnt_show,
+			.store = NULL,
+		},
+		.gpio = &gpioButton.gpio,
 	},
 
 	{ }
@@ -1972,10 +1999,10 @@ static struct DeviceAttrBean devAttrBeansWatchdog[] = {
 				.name = "expired",
 				.mode = 0440,
 			},
-			.show = devAttrGpio_show,
+			.show = devAttrGpioDeb_show,
 			.store = NULL,
 		},
-		.gpio = &gpioWdExpired,
+		.gpio = &gpioWdExpired.gpio,
 	},
 
 	{
@@ -4551,10 +4578,10 @@ static void cleanup(void) {
 		gpioFree(&gpioDT[i]);
 	}
 	gpioFree(&gpioBuzzer);
-	gpioFree(&gpioButton);
+	gpioFreeDebounce(&gpioButton);
 	gpioFree(&gpioWdEn);
 	gpioFree(&gpioWdHeartbeat);
-	gpioFree(&gpioWdExpired);
+	gpioFreeDebounce(&gpioWdExpired);
 	gpioFree(&gpioPwrDnwEn);
 	gpioFree(&gpioUsb1En);
 	gpioFree(&gpioUsb1Err);
@@ -4586,8 +4613,9 @@ static int __init ionopimax_init(void) {
 		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioBuzzer.gpio);
 		goto fail;
 	}
-	if (gpioInit(&gpioButton)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioButton.gpio);
+	if (gpioInitDebounce(&gpioButton)) {
+		pr_alert("ionopimax: * | error setting up GPIO %d\n",
+				gpioButton.gpio.gpio);
 		goto fail;
 	}
 	if (gpioInit(&gpioWdEn)) {
@@ -4599,9 +4627,9 @@ static int __init ionopimax_init(void) {
 				gpioWdHeartbeat.gpio);
 		goto fail;
 	}
-	if (gpioInit(&gpioWdExpired)) {
+	if (gpioInitDebounce(&gpioWdExpired)) {
 		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioWdExpired.gpio);
+				gpioWdExpired.gpio.gpio);
 		goto fail;
 	}
 	if (gpioInit(&gpioPwrDnwEn)) {
