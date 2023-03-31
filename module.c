@@ -22,6 +22,7 @@
 #include <linux/of.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/version.h>
 
 #define I2C_ADDR_LOCAL 0x35
 
@@ -57,7 +58,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.13");
+MODULE_VERSION("1.14");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4509,14 +4510,20 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
 static int ionopimax_i2c_remove(struct i2c_client *client) {
+#else
+static void ionopimax_i2c_remove(struct i2c_client *client) {
+#endif
 	struct ionopimax_i2c_data *data = i2c_get_clientdata(client);
 	mutex_destroy(&data->update_lock);
 
 	printk(KERN_INFO "ionopimax: - | i2c remove addr=0x%02hx\n",
 			client->addr);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
 	return 0;
+#endif
 }
 
 const struct of_device_id ionopimax_of_match[] = {
