@@ -58,7 +58,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.14");
+MODULE_VERSION("1.15");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4603,7 +4603,7 @@ static int __init ionopimax_init(void) {
 	struct DeviceAttrBean *dab;
 	int i, di, ai;
 
-	printk(KERN_INFO "ionopimax: - | init\n");
+	pr_info("ionopimax: - | init\n");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
 
@@ -4683,7 +4683,7 @@ static int __init ionopimax_init(void) {
 
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
 	if (IS_ERR(pDeviceClass)) {
-		printk(KERN_ALERT "ionopimax: * | failed to create device class\n");
+		pr_alert("ionopimax: * | failed to create device class\n");
 		goto fail;
 	}
 
@@ -4692,7 +4692,7 @@ static int __init ionopimax_init(void) {
 		db = &devices[di];
 		db->pDevice = device_create(pDeviceClass, NULL, 0, NULL, db->name);
 		if (IS_ERR(db->pDevice)) {
-			pr_alert("ionopi: * | failed to create device '%s'\n", db->name);
+			pr_alert("ionopimax: * | failed to create device '%s'\n", db->name);
 			goto fail;
 		}
 
@@ -4700,7 +4700,7 @@ static int __init ionopimax_init(void) {
 		while (db->devAttrBeans[ai].devAttr.attr.name != NULL) {
 			dab = &db->devAttrBeans[ai];
 			if (device_create_file(db->pDevice, &dab->devAttr)) {
-				pr_alert("ionopi: * | failed to create device file '%s/%s'\n",
+				pr_alert("ionopimax: * | failed to create device file '%s/%s'\n",
 						db->name, dab->devAttr.attr.name);
 				goto fail;
 			}
@@ -4710,6 +4710,7 @@ static int __init ionopimax_init(void) {
 	}
 
 	if (getFwVersion() < 0) {
+		pr_alert("ionopimax: * | failed to read FW version\n");
 		goto fail;
 	}
 
@@ -4718,7 +4719,7 @@ static int __init ionopimax_init(void) {
 	return 0;
 
 	fail:
-	printk(KERN_ALERT "ionopimax: * | init failed\n");
+	pr_alert("ionopimax: * | init failed\n");
 	cleanup();
 	return -1;
 }
