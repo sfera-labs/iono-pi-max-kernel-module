@@ -1,6 +1,6 @@
 # Iono Pi Max driver kernel module
 
-Raspberry Pi OS Kernel module for [Iono Pi Max](https://www.sferalabs.cc/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
+Raspberry Pi OS Kernel module for [Iono Pi Max](https://www.sferalabs.cc/product/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
 
 Usage examples, from the shell:
 
