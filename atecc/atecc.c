@@ -56,7 +56,7 @@ static int atecc_i2c_probe(struct i2c_client *client,
 	 */
 	uint8_t i2c_message[8] = { 0x03, 0x07, 0x02, 0x80, 0x00, 0x00, 0x09, 0xAD };
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 10; i++) {
 		// send wake up message, no check on return value
 		i2c_master_send(client, &i2c_wake_msg, 1);
 		msleep(1);
@@ -76,6 +76,7 @@ static int atecc_i2c_probe(struct i2c_client *client,
 				}
 			}
 		}
+		msleep(10);
 	}
 
 	return ret;
