@@ -7,6 +7,10 @@
 
 int wCount = 0;
 
+static inline int gpio_set_debounce(unsigned gpio, unsigned debounce) {
+    return gpiod_set_debounce(gpio_to_desc(gpio), debounce);
+}
+
 static enum hrtimer_restart wiegandTimerHandler(struct hrtimer *tmr) {
 	struct WiegandBean *w;
 	w = container_of(tmr, struct WiegandBean, timer);

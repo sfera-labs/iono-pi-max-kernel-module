@@ -4489,8 +4489,7 @@ static ssize_t devAttrSerialRs232Rs485Inv_store(struct device *dev,
 	return count;
 }
 
-static int ionopimax_i2c_probe(struct i2c_client *client,
-		const struct i2c_device_id *id) {
+static int ionopimax_i2c_probe(struct i2c_client *client) {
 	struct ionopimax_i2c_data *data;
 
 	data = devm_kzalloc(&client->dev, sizeof(struct ionopimax_i2c_data),
@@ -4681,7 +4680,7 @@ static int __init ionopimax_init(void) {
 	wiegandInit(&w1);
 	wiegandInit(&w2);
 
-	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
+	pDeviceClass = class_create("ionopimax");
 	if (IS_ERR(pDeviceClass)) {
 		pr_alert("ionopimax: * | failed to create device class\n");
 		goto fail;

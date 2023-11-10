@@ -34,8 +34,7 @@ static void getCRC16LittleEndian(size_t length, const uint8_t *data,
 	crc_le[1] = (uint8_t) (crc >> 8);
 }
 
-static int atecc_i2c_probe(struct i2c_client *client,
-		const struct i2c_device_id *id) {
+static int atecc_i2c_probe(struct i2c_client *client) {
 	uint8_t i;
 	int ret = -1;
 	uint8_t i2c_wake_msg = 0x00; // msg sent to I2C bus to wake up ATECC608A from sleep state
