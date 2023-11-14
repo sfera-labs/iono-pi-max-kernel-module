@@ -58,7 +58,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.16");
+MODULE_VERSION("1.17");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4489,8 +4489,12 @@ static ssize_t devAttrSerialRs232Rs485Inv_store(struct device *dev,
 	return count;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,5,0)
+static int ionopimax_i2c_probe(struct i2c_client *client) {
+#else
 static int ionopimax_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id) {
+#endif
 	struct ionopimax_i2c_data *data;
 
 	data = devm_kzalloc(&client->dev, sizeof(struct ionopimax_i2c_data),
@@ -4681,7 +4685,11 @@ static int __init ionopimax_init(void) {
 	wiegandInit(&w1);
 	wiegandInit(&w2);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,5,0)
+	pDeviceClass = class_create("ionopimax");
+#else
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
+#endif
 	if (IS_ERR(pDeviceClass)) {
 		pr_alert("ionopimax: * | failed to create device class\n");
 		goto fail;
