@@ -26,39 +26,12 @@
 
 #define I2C_ADDR_LOCAL 0x35
 
-#define GPIO_DI1 16
-#define GPIO_DI2 19
-#define GPIO_DI3 20
-#define GPIO_DI4 21
-
-#define GPIO_DT1 29
-#define GPIO_DT2 34
-#define GPIO_DT3 35
-#define GPIO_DT4 36
-
-#define GPIO_BUZZER 40
-
-#define GPIO_BUTTON 38
-
-#define GPIO_WD_EN 39
-#define GPIO_WD_HEARTBEAT 32
-#define GPIO_WD_EXPIRED 17
-
-#define GPIO_PWR_DWN_EN 18
-
-#define GPIO_USB1_EN 30
-#define GPIO_USB1_ERR 0
-
-#define GPIO_USB2_EN 31
-#define GPIO_USB2_ERR 1
-
-#define GPIO_SW_EN 41
-#define GPIO_SW_RESET 45
+#define LOG_TAG "ionopimax: "
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.17");
+MODULE_VERSION("1.18");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -160,29 +133,25 @@ static struct DebouncedGpioBean gpioDI[] = {
 	[DI1] = {
 		.gpio = {
 			.name = "ionopimax_di1",
-			.gpio = GPIO_DI1,
-			.mode = GPIO_MODE_IN,
+			.flags = GPIOD_IN,
 		},
 	},
 	[DI2] = {
 		.gpio = {
 			.name = "ionopimax_di2",
-			.gpio = GPIO_DI2,
-			.mode = GPIO_MODE_IN,
+			.flags = GPIOD_IN,
 		},
 	},
 	[DI3] = {
 		.gpio = {
 			.name = "ionopimax_di3",
-			.gpio = GPIO_DI3,
-			.mode = GPIO_MODE_IN,
+			.flags = GPIOD_IN,
 		},
 	},
 	[DI4] = {
 		.gpio = {
 			.name = "ionopimax_di4",
-			.gpio = GPIO_DI4,
-			.mode = GPIO_MODE_IN,
+			.flags = GPIOD_IN,
 		},
 	},
 };
@@ -190,101 +159,85 @@ static struct DebouncedGpioBean gpioDI[] = {
 static struct GpioBean gpioDT[] = {
 	[DT1] = {
 		.name = "ionopimax_dt1",
-		.gpio = GPIO_DT1,
 	},
 	[DT2] = {
 		.name = "ionopimax_dt2",
-		.gpio = GPIO_DT2,
 	},
 	[DT3] = {
 		.name = "ionopimax_dt3",
-		.gpio = GPIO_DT3,
 	},
 	[DT4] = {
 		.name = "ionopimax_dt4",
-		.gpio = GPIO_DT4,
 	},
 };
 
 static struct GpioBean gpioBuzzer = {
 	.name = "ionopimax_buzzer",
-	.gpio = GPIO_BUZZER,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 };
 
 static struct DebouncedGpioBean gpioButton = {
 	.gpio = {
 		.name = "ionopimax_button",
-		.gpio = GPIO_BUTTON,
-		.mode = GPIO_MODE_IN,
+		.flags = GPIOD_IN,
 		.invert = true,
 	},
 };
 
 static struct GpioBean gpioWdEn = {
 	.name = "ionopimax_wd_en",
-	.gpio = GPIO_WD_EN,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 };
 
 static struct GpioBean gpioWdHeartbeat = {
 	.name = "ionopimax_wd_hb",
-	.gpio = GPIO_WD_HEARTBEAT,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 };
 
 static struct DebouncedGpioBean gpioWdExpired = {
 	.gpio = {
 		.name = "ionopimax_wd_ex",
-		.gpio = GPIO_WD_EXPIRED,
-		.mode = GPIO_MODE_IN,
+		.flags = GPIOD_IN,
 	},
 };
 
 static struct GpioBean gpioPwrDnwEn = {
 	.name = "ionopimax_pwr_dwn",
-	.gpio = GPIO_PWR_DWN_EN,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 };
 
 static struct GpioBean gpioUsb1En = {
 	.name = "ionopimax_usb1_en",
-	.gpio = GPIO_USB1_EN,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 	.invert = true,
 };
 
 static struct GpioBean gpioUsb1Err = {
 	.name = "ionopimax_usb1_err",
-	.gpio = GPIO_USB1_ERR,
-	.mode = GPIO_MODE_IN,
+	.flags = GPIOD_IN,
 	.invert = true,
 };
 
 static struct GpioBean gpioUsb2En = {
 	.name = "ionopimax_usb2_en",
-	.gpio = GPIO_USB2_EN,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 	.invert = true,
 };
 
 static struct GpioBean gpioUsb2Err = {
 	.name = "ionopimax_usb2_err",
-	.gpio = GPIO_USB2_ERR,
-	.mode = GPIO_MODE_IN,
+	.flags = GPIOD_IN,
 	.invert = true,
 };
 
 static struct GpioBean gpioSwEn = {
 	.name = "ionopimax_sw_en",
-	.gpio = GPIO_SW_EN,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 };
 
 static struct GpioBean gpioSwReset = {
 	.name = "ionopimax_sw_rst",
-	.gpio = GPIO_SW_RESET,
-	.mode = GPIO_MODE_OUT,
+	.flags = GPIOD_OUT_LOW,
 };
 
 static struct WiegandBean w1 = {
@@ -4508,8 +4461,7 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 
 	ionopimax_i2c_client = client;
 
-	printk(KERN_INFO "ionopimax: - | i2c probe addr=0x%02hx\n",
-			client->addr);
+	pr_info(LOG_TAG "i2c probe addr=0x%02hx\n", client->addr);
 
 	return 0;
 }
@@ -4522,8 +4474,7 @@ static void ionopimax_i2c_remove(struct i2c_client *client) {
 	struct ionopimax_i2c_data *data = i2c_get_clientdata(client);
 	mutex_destroy(&data->update_lock);
 
-	printk(KERN_INFO "ionopimax: - | i2c remove addr=0x%02hx\n",
-			client->addr);
+	pr_info(LOG_TAG "i2c remove addr=0x%02hx\n", client->addr);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
 	return 0;
@@ -4602,80 +4553,71 @@ static void cleanup(void) {
 	gpioFree(&gpioSwReset);
 }
 
-static int __init ionopimax_init(void) {
+static int ionopimax_init(struct platform_device *pdev) {
 	struct DeviceBean *db;
 	struct DeviceAttrBean *dab;
 	int i, di, ai;
 
-	pr_info("ionopimax: - | init\n");
+	pr_info(LOG_TAG "init\n");
 
 	i2c_add_driver(&ionopimax_i2c_driver);
 
 	ateccAddDriver();
 
+	gpioSetPlatformDev(pdev);
+
 	for (i = 0; i < DI_SIZE; i++) {
 		if (gpioInitDebounce(&gpioDI[i])) {
-			pr_alert("ionopimax: * | error setting up GPIO %d\n",
-					gpioDI[i].gpio.gpio);
+			pr_err(LOG_TAG "error setting up GPIO %s\n", gpioDI[i].gpio.name);
 			goto fail;
 		}
 	}
 	if (gpioInit(&gpioBuzzer)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioBuzzer.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioBuzzer.name);
 		goto fail;
 	}
 	if (gpioInitDebounce(&gpioButton)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioButton.gpio.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioButton.gpio.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioWdEn)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n", gpioWdEn.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioWdEn.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioWdHeartbeat)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioWdHeartbeat.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioWdHeartbeat.name);
 		goto fail;
 	}
 	if (gpioInitDebounce(&gpioWdExpired)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioWdExpired.gpio.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioWdExpired.gpio.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioPwrDnwEn)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioPwrDnwEn.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioPwrDnwEn.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioUsb1En)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioUsb1En.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioUsb1En.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioUsb1Err)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioUsb1Err.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioUsb1Err.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioUsb2En)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioUsb2En.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioUsb2En.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioUsb2Err)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioUsb2Err.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioUsb2Err.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioSwEn)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioSwEn.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioSwEn.name);
 		goto fail;
 	}
 	if (gpioInit(&gpioSwReset)) {
-		pr_alert("ionopimax: * | error setting up GPIO %d\n",
-				gpioSwReset.gpio);
+		pr_err(LOG_TAG "error setting up GPIO %s\n", gpioSwReset.name);
 		goto fail;
 	}
 
@@ -4691,7 +4633,7 @@ static int __init ionopimax_init(void) {
 	pDeviceClass = class_create(THIS_MODULE, "ionopimax");
 #endif
 	if (IS_ERR(pDeviceClass)) {
-		pr_alert("ionopimax: * | failed to create device class\n");
+		pr_err(LOG_TAG "failed to create device class\n");
 		goto fail;
 	}
 
@@ -4700,7 +4642,7 @@ static int __init ionopimax_init(void) {
 		db = &devices[di];
 		db->pDevice = device_create(pDeviceClass, NULL, 0, NULL, db->name);
 		if (IS_ERR(db->pDevice)) {
-			pr_alert("ionopimax: * | failed to create device '%s'\n", db->name);
+			pr_err(LOG_TAG "failed to create device '%s'\n", db->name);
 			goto fail;
 		}
 
@@ -4708,7 +4650,7 @@ static int __init ionopimax_init(void) {
 		while (db->devAttrBeans[ai].devAttr.attr.name != NULL) {
 			dab = &db->devAttrBeans[ai];
 			if (device_create_file(db->pDevice, &dab->devAttr)) {
-				pr_alert("ionopimax: * | failed to create device file '%s/%s'\n",
+				pr_alert(LOG_TAG "failed to create device file '%s/%s'\n",
 						db->name, dab->devAttr.attr.name);
 				goto fail;
 			}
@@ -4718,24 +4660,33 @@ static int __init ionopimax_init(void) {
 	}
 
 	if (getFwVersion() < 0) {
-		pr_alert("ionopimax: * | failed to read FW version\n");
+		pr_err(LOG_TAG "failed to read FW version\n");
 		goto fail;
 	}
 
-	printk(KERN_INFO "ionopimax: - | ready FW%d.%d\n", fwVerMajor,
-			fwVerMinor);
+	pr_info(LOG_TAG "ready FW%d.%d\n", fwVerMajor, fwVerMinor);
 	return 0;
 
 	fail:
-	pr_alert("ionopimax: * | init failed\n");
+	pr_err(LOG_TAG "init failed\n");
 	cleanup();
 	return -1;
 }
 
-static void __exit ionopimax_exit(void) {
+static int ionopimax_exit(struct platform_device *pdev) {
 	cleanup();
-	printk(KERN_INFO "ionopimax: - | exit\n");
+	pr_info(LOG_TAG "exit\n");
+	return 0;
 }
 
-module_init( ionopimax_init);
-module_exit( ionopimax_exit);
+static struct platform_driver ionopimax_driver = {
+	.probe = ionopimax_init,
+	.remove = ionopimax_exit,
+	.driver = {
+		.name = "ionopimax",
+		.owner = THIS_MODULE,
+		.of_match_table = ionopimax_of_match,
+	}
+};
+
+module_platform_driver(ionopimax_driver);

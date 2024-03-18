@@ -5,6 +5,50 @@
 	compatible = "brcm,bcm2835";
 	
 	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			dios: dios@0 {
+				compatible = "sferalabs,ionopimax";
+				pinctrl-names = "default";
+				pinctrl-0 = <&dios_pins>;
+				status = "okay";
+
+				ionopimax_di1-gpios = <&gpio 16 0>;
+				ionopimax_di2-gpios = <&gpio 19 0>;
+				ionopimax_di3-gpios = <&gpio 20 0>;
+				ionopimax_di4-gpios = <&gpio 21 0>;
+				ionopimax_dt1-gpios = <&gpio 29 0>;
+				ionopimax_dt2-gpios = <&gpio 34 0>;
+				ionopimax_dt3-gpios = <&gpio 35 0>;
+				ionopimax_dt4-gpios = <&gpio 36 0>;
+				ionopimax_buzzer-gpios = <&gpio 40 0>;
+				ionopimax_button-gpios = <&gpio 38 0>;
+				ionopimax_wd_en-gpios = <&gpio 39 0>;
+				ionopimax_wd_hb-gpios = <&gpio 32 0>;
+				ionopimax_wd_ex-gpios = <&gpio 17 0>;
+				ionopimax_pwr_dwn-gpios = <&gpio 18 0>;
+				ionopimax_usb1_en-gpios = <&gpio 30 0>;
+				ionopimax_usb1_err-gpios = <&gpio 0 0>;
+				ionopimax_usb2_en-gpios = <&gpio 31 0>;
+				ionopimax_usb2_err-gpios = <&gpio 1 0>;
+				ionopimax_sw_en-gpios = <&gpio 41 0>;
+				ionopimax_sw_rst-gpios = <&gpio 45 0>;
+			};
+		};
+	};
+	
+	fragment@1 {
+		target = <&gpio>;
+		__overlay__ {
+			dios_pins: dios_pins {
+				brcm,pins = <16 19 20 21>;
+				brcm,function = <0>; /* in */
+				brcm,pull = <0>; /* no pull */
+			};
+		};
+	};
+	
+	fragment@2 {
 		target = <&i2c_arm>;
 		__overlay__ {
 			#address-cells = <1>;
@@ -15,25 +59,12 @@
 				compatible = "sferalabs,ionopimax";
 				reg = <0x35>;
 				status = "okay";
-				pinctrl-names = "default";
-				pinctrl-0 = <&ionopimax_di>;
 			};
 			
 			atecc608a: atecc608a@60 {
 				compatible = "sferalabs,atecc";
 				reg = <0x60>;
 				status = "okay";
-			};
-		};
-	};
-	
-	fragment@1 {
-		target = <&gpio>;
-		__overlay__ {
-			ionopimax_di: ionopimax_di {
-				brcm,pins = <16 19 20 21>;
-				brcm,function = <0>; /* in */
-				brcm,pull = <0>; /* no pull */
 			};
 		};
 	};
