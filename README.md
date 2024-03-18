@@ -52,6 +52,7 @@ Clone this repo:
 Make and install:
 
     cd iono-pi-max-kernel-module
+    make clean
     make
     sudo make install
     
