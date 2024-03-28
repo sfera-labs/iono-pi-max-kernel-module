@@ -33,7 +33,7 @@ Make sure your system is updated:
     sudo apt update
     sudo apt upgrade
 
-If you are using Iono Pi Max with a Raspberry Pi CM **4S** and a **32-bit** OS, add to `/boot/config.txt` the following line: [[why?](https://github.com/raspberrypi/firmware/issues/1795)]
+If you are using Iono Pi Max with a Raspberry Pi CM **4S** and a **32-bit** OS, add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line: [[why?](https://github.com/raspberrypi/firmware/issues/1795)]
 
     arm_64bit=0
     
@@ -61,7 +61,7 @@ Compile the Device Tree and install it:
     dtc -@ -Hepapr -I dts -O dtb -o ionopimax.dtbo ionopimax.dts
     sudo cp ionopimax.dtbo /boot/overlays/
 
-Add to `/boot/config.txt` the following line:
+Add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line:
 
     dtoverlay=ionopimax
 
@@ -78,7 +78,7 @@ and add your user to the group, e.g. for user "pi":
 
     sudo usermod -a -G ionopimax pi
 
-To enable SocketCAN support for the CAN FD/CAN 2.0 controller (MCP2518FD), add to `/boot/config.txt` the following line:
+To enable SocketCAN support for the CAN FD/CAN 2.0 controller (MCP2518FD), add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line:
 
     dtoverlay=mcp251xfd,spi0-0,interrupt=28
 
