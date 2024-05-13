@@ -31,7 +31,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.18");
+MODULE_VERSION("1.19");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
