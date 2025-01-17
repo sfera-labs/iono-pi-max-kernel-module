@@ -31,7 +31,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.19");
+MODULE_VERSION("1.20");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4659,7 +4659,15 @@ static int ionopimax_init(struct platform_device *pdev) {
 		di++;
 	}
 
-	if (getFwVersion() < 0) {
+	fwVerMajor = 0;
+	for (i = 0; i < 50; i++) {
+		if (getFwVersion() >= 0) {
+			break;
+		}
+		msleep(20);
+	}
+
+	if (fwVerMajor == 0) {
 		pr_err(LOG_TAG "failed to read FW version\n");
 		goto fail;
 	}
