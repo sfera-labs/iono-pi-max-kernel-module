@@ -31,7 +31,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.21");
+MODULE_VERSION("1.22");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4448,10 +4448,11 @@ static int ionopimax_i2c_probe(struct i2c_client *client) {
 static int ionopimax_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id) {
 #endif
+	int32_t res;
 	struct ionopimax_i2c_data *data;
 
-	data = devm_kzalloc(&client->dev, sizeof(struct ionopimax_i2c_data),
-	GFP_KERNEL);
+	data = devm_kzalloc(&client->dev,
+			sizeof(struct ionopimax_i2c_data), GFP_KERNEL);
 	if (!data) {
 		return -ENOMEM;
 	}
@@ -4461,7 +4462,13 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 
 	ionopimax_i2c_client = client;
 
-	pr_info(LOG_TAG "i2c probe addr=0x%02hx\n", client->addr);
+	res = getFwVersion();
+	if (res < 0) {
+		return res;
+	}
+
+	pr_info(LOG_TAG "MCU probed addr=0x%02hx FW%d.%d\n",
+		client->addr, fwVerMajor, fwVerMinor);
 
 	return 0;
 }
@@ -4657,22 +4664,7 @@ static int ionopimax_init(struct platform_device *pdev) {
 		di++;
 	}
 
-	fwVerMajor = 0;
-	for (i = 0; i < 50; i++) {
-		if (getFwVersion() >= 0) {
-			break;
-		}
-		msleep(20);
-	}
-
-	if (fwVerMajor == 0) {
-		pr_err(LOG_TAG "failed to read FW version\n");
-		goto fail;
-	}
-
-	ateccAddDriver();
-
-	pr_info(LOG_TAG "ready FW%d.%d\n", fwVerMajor, fwVerMinor);
+	pr_info(LOG_TAG "ready\n");
 	return 0;
 
 	fail:
