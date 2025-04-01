@@ -31,7 +31,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.22");
+MODULE_VERSION("1.23");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4673,10 +4673,16 @@ static int ionopimax_init(struct platform_device *pdev) {
 	return -1;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+static void ionopimax_exit(struct platform_device *pdev) {
+#else
 static int ionopimax_exit(struct platform_device *pdev) {
-	cleanup();
-	pr_info(LOG_TAG "exit\n");
-	return 0;
+#endif
+  cleanup();
+  pr_info(LOG_TAG "exit\n");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
+  return 0;
+#endif
 }
 
 static struct platform_driver ionopimax_driver = {
