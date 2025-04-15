@@ -1,28 +1,8 @@
 # Iono Pi Max driver kernel module
 
-Raspberry Pi OS Kernel module for [Iono Pi Max](https://www.sferalabs.cc/product/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
+Raspberry Pi OS (Debian) Kernel module for [Iono Pi Max](https://www.sferalabs.cc/product/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
 
-Usage examples, from the shell:
-
-Close a relay:
-
-    $ echo 1 > /sys/class/ionopimax/digital_out/o1
-    
-Read the voltage on AV1:
-
-    $ cat /sys/class/ionopimax/analog_in/av1
-    
-Or using Python:
-
-    f = open('/sys/class/ionopimax/digital_out/o1', 'w')
-    f.write('1')
-    f.close()
-    print('Relay O1 closed')
-
-    f = open('/sys/class/ionopimax/analog_in/av1', 'r')
-    val = f.read().strip()
-    f.close()
-    print('AV1: ' + val)
+It gives access to all Iono Pi Max functionalities and configuration options via sysfs virtual files.
 
 ## Compile and Install
 
@@ -40,10 +20,6 @@ If you are using Iono Pi Max with a Raspberry Pi CM **4S** and a **32-bit** OS, 
 Reboot:
 
     sudo reboot
-    
-After reboot, install git and the Raspberry Pi kernel headers:
-
-    sudo apt install git raspberrypi-kernel-headers
 
 Clone this repo:
 
@@ -69,7 +45,7 @@ The `99-ionopimax-serial.rules` udev rule makes sure the USB dev connected to Io
 
     sudo cp 99-ionopimax-serial.rules /etc/udev/rules.d/
 
-Optionally, to be able to use the `/sys/class/ionopimax/` files not as super user, create a new group "ionopimax" and set it as the module owner group by adding an udev rule:
+Optionally, to access the sysfs interface without superuser privileges, create a new group "ionopimax" and set it as the module owner group by adding an **udev** rule:
 
     sudo groupadd ionopimax
     sudo cp 99-ionopimax.rules /etc/udev/rules.d/
@@ -86,17 +62,43 @@ Reboot:
 
     sudo reboot
 
+
 ## Usage
 
-After loading the module, you will find all the available devices under the directory `/sys/class/ionopimax/`.
+After installation, you will find all the available devices under the directory `/sys/class/ionopimax/`.
 
 The following paragraphs list all the possible devices (directories) and files coresponding to Iono Pi Max's features. 
 
-You can write to and/or read these files to configure, monitor and control your Iono Pi Max. The kernel module will take care of performing the corresponding GPIO or I2C operations. I2C transactions are automatically repeated in case of error and CRC validation is used when supported by the installed firmware (>= 1.4).
+You can write to and/or read these files to configure, monitor and control your Iono Pi Max. 
+
+Usage examples, from the shell:
+
+Close a relay:
+
+    $ echo 1 > /sys/class/ionopimax/digital_out/o1
+    
+Read the voltage on AV1:
+
+    $ cat /sys/class/ionopimax/analog_in/av1
+    
+Or using Python:
+
+    f = open('/sys/class/ionopimax/digital_out/o1', 'w')
+    f.write('1')
+    f.close()
+    print('Relay O1 closed')
+
+    f = open('/sys/class/ionopimax/analog_in/av1', 'r')
+    val = f.read().strip()
+    f.close()
+    print('AV1: ' + val)
+
+The kernel module will take care of performing the corresponding GPIO or I2C operations. I2C transactions are automatically repeated in case of error and CRC validation is used when supported by the installed firmware (>= 1.4).
 
 Files written in _italic_ are configuration parameters. Those marked with * are not persistent, i.e. their values are reset to default after a power cycle. To change the default values use the `/mcu/config` file (see below).    
 Configuration parameters not marked with * are permanently saved each time they are changed, so that their value is retained across power cycles or MCU resets.   
 This allows to have a different configuration during the boot up phase, even after an abrupt shutdown. For instance, you may want a short watchdog timeout while your application is running, but it needs to be reset to a longer timeout when a power cycle occurs so that Iono Pi Max has the time to boot and restart your application handling the watchdog heartbeat.
+
 
 ### Button - `/sys/class/ionopimax/button/`
 
