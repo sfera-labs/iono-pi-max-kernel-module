@@ -1,7 +1,7 @@
 /*
  * ionopimax
  *
- *     Copyright (C) 2020-2023 Sfera Labs S.r.l.
+ *     Copyright (C) 2020-2025 Sfera Labs S.r.l.
  *
  *     For information, visit https://www.sferalabs.cc
  *
@@ -31,7 +31,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
 MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.23");
+MODULE_VERSION("1.24");
 
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
@@ -4464,6 +4464,7 @@ static int ionopimax_i2c_probe(struct i2c_client *client,
 
 	res = getFwVersion();
 	if (res < 0) {
+		ionopimax_i2c_client = NULL;
 		return res;
 	}
 
