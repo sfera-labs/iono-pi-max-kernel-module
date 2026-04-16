@@ -28,11 +28,6 @@
 
 #define LOG_TAG "ionopimax: "
 
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
-MODULE_DESCRIPTION("Iono Pi Max driver module");
-MODULE_VERSION("1.24");
-
 struct DeviceAttrRegSpecs {
 	uint16_t reg;
 	uint8_t len;
@@ -4695,5 +4690,10 @@ static struct platform_driver ionopimax_driver = {
 		.of_match_table = ionopimax_of_match,
 	}
 };
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Sfera Labs - http://sferalabs.cc");
+MODULE_DESCRIPTION("Iono Pi Max driver module");
+MODULE_VERSION(IONOPIMAX_MODULE_VERSION);
 
 module_platform_driver(ionopimax_driver);

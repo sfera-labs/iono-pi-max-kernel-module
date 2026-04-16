@@ -21,41 +21,49 @@ Reboot:
 
     sudo reboot
 
-After reboot, install git and the kernel headers:
- 
-     sudo apt install git linux-headers-$(uname -r)
+After reboot, install required tools:
+
+    sudo apt install git device-tree-compiler dkms linux-headers-$(uname -r)
 
 Clone this repo:
 
     git clone --depth 1 https://github.com/sfera-labs/iono-pi-max-kernel-module.git
 
-Make and install:
-
     cd iono-pi-max-kernel-module
+
+### Recommended installation mode: DKMS
+
+This is the recommended mode. It automatically rebuilds and reinstalls the module when new kernel versions are installed.
+
+Register, build and install with DKMS:
+
+    sudo dkms add .
+    sudo dkms build -m ionopimax -v $(cat VERSION)
+    sudo dkms install -m ionopimax -v $(cat VERSION)
+
+### Advanced installation mode: manual make install (running kernel only)
+
+Use this only if you specifically want to install for the current running kernel version only.
+
     make clean
     make
     sudo make install
-    
-Compile the Device Tree and install it:
 
-    dtc -@ -Hepapr -I dts -O dtb -o ionopimax.dtbo ionopimax.dts
-    sudo cp ionopimax.dtbo /boot/overlays/
+Manual mode does not provide automatic rebuild on kernel upgrades.
+
+### Enable overlay at boot
 
 Add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line:
 
     dtoverlay=ionopimax
 
-The `99-ionopimax-serial.rules` udev rule makes sure the USB dev connected to Iono's RS-485 (or RS-232 if inverted) interface is always available under `/dev/ionopimax-serial`:
+The install process places `99-ionopimax-serial.rules`, which makes sure the USB dev connected to Iono's RS-485 (or RS-232 if inverted) interface is always available under `/dev/ionopimax-serial`.
 
-    sudo cp 99-ionopimax-serial.rules /etc/udev/rules.d/
+### Optional non-root access to `/sys/class/ionopimax`
 
-Optionally, to access the sysfs interface without superuser privileges, create a new group "ionopimax" and set it as the module owner group by adding an **udev** rule:
+The install process places `99-ionopimax.rules`, which sets owner group `ionopimax` for sysfs entries. To access the sysfs interface without superuser privileges, create the group and add your user, e.g. for user "pi":
 
     sudo groupadd ionopimax
-    sudo cp 99-ionopimax.rules /etc/udev/rules.d/
-
-and add your user to the group, e.g. for user "pi":
-
     sudo usermod -a -G ionopimax pi
 
 To enable SocketCAN support for the CAN FD/CAN 2.0 controller (MCP2518FD), add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line:
@@ -71,9 +79,9 @@ Reboot:
 
 After installation, you will find all the available devices under the directory `/sys/class/ionopimax/`.
 
-The following paragraphs list all the possible devices (directories) and files coresponding to Iono Pi Max's features. 
+The following paragraphs list all the possible devices (directories) and files coresponding to Iono Pi Max's features.
 
-You can write to and/or read these files to configure, monitor and control your Iono Pi Max. 
+You can write to and/or read these files to configure, monitor and control your Iono Pi Max.
 
 Usage examples, from the shell:
 
@@ -99,8 +107,8 @@ Or using Python:
 
 The kernel module will take care of performing the corresponding GPIO or I2C operations. I2C transactions are automatically repeated in case of error and CRC validation is used when supported by the installed firmware (>= 1.4).
 
-Files written in _italic_ are configuration parameters. Those marked with * are not persistent, i.e. their values are reset to default after a power cycle. To change the default values use the `/mcu/config` file (see below).    
-Configuration parameters not marked with * are permanently saved each time they are changed, so that their value is retained across power cycles or MCU resets.   
+Files written in *italic* are configuration parameters. Those marked with \* are not persistent, i.e. their values are reset to default after a power cycle. To change the default values use the `/mcu/config` file (see below).  
+Configuration parameters not marked with * are permanently saved each time they are changed, so that their value is retained across power cycles or MCU resets.  
 This allows to have a different configuration during the boot up phase, even after an abrupt shutdown. For instance, you may want a short watchdog timeout while your application is running, but it needs to be reset to a longer timeout when a power cycle occurs so that Iono Pi Max has the time to boot and restart your application handling the watchdog heartbeat.
 
 
@@ -141,14 +149,15 @@ This allows to have a different configuration during the boot up phase, even aft
 |di&lt;n&gt;|R|0|Digital input (DI) &lt;n&gt; (1 - 4) low|
 |di&lt;n&gt;|R|1|Digital input (DI) &lt;n&gt; (1 - 4) high|
 
-For each digital input, we also expose: 
+For each digital input, we also expose:
+
 * the debounced state
 * 2 debounce times in ms ("on" for high state and "off" for low state) with default value of 50ms
 * 2 state counters ("on" for high state and "off" for low state)
 
-The debounce times for each DI has been splitted in "on" and "off" in order to make the debounce feature more versatile and suited for particular application needs (e.g. if we consider digital input 1, and set its debounce "on" time to 50ms and its debounce "off" time to 0ms, we just created a delay-on type control for digital input 1 with delay-on time equal to 50ms).    
-Change in value of a debounce time automatically resets both counters.    
-The debounce state of each digital input at system start is UNDEFINED (-1), because if the signal on the specific channel cannot remain stable for a period of time greater than the ones defined as debounce "on" and "off" times, we are not able to provide a valid result. 
+The debounce times for each DI has been splitted in "on" and "off" in order to make the debounce feature more versatile and suited for particular application needs (e.g. if we consider digital input 1, and set its debounce "on" time to 50ms and its debounce "off" time to 0ms, we just created a delay-on type control for digital input 1 with delay-on time equal to 50ms).  
+Change in value of a debounce time automatically resets both counters.  
+The debounce state of each digital input at system start is UNDEFINED (-1), because if the signal on the specific channel cannot remain stable for a period of time greater than the ones defined as debounce "on" and "off" times, we are not able to provide a valid result.
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
@@ -157,15 +166,15 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |di&lt;n&gt;_deb<sup>([pollable](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/poll-sysfs-files.md))</sup>|R|-1|Digital input &lt;n&gt; debounced value undefined|
 |di&lt;n&gt;_deb_on_ms|RW|val|Minimum stable time in ms to trigger change of the debounced value of digital input &lt;n&gt; to high state. Default value=50|
 |di&lt;n&gt;_deb_off_ms|RW|val|Minimum stable time in ms to trigger change of the debounced value of digital input &lt;n&gt; to low state. Default value=50|
-|di&lt;n&gt;_deb_on_cnt|R|val| Number of times with the debounced value of the digital input &lt;n&gt; in high state. Rolls back to 0 after 4294967295|
+|di&lt;n&gt;_deb_on_cnt|R|val|Number of times with the debounced value of the digital input &lt;n&gt; in high state. Rolls back to 0 after 4294967295|
 |di&lt;n&gt;_deb_off_cnt|R|val|Number of times with the debounced value of the digital input &lt;n&gt; in low state. Rolls back to 0 after 4294967295|
 
 ### Digital Outputs - `/sys/class/ionopimax/digital_out/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_pdc_*|R/W|0|Pulldown current disabled|
-|_pdc_*|R/W|1|Pulldown current enabled (factory default)|
+|*pdc*\*|R/W|0|Pulldown current disabled|
+|*pdc*\*|R/W|1|Pulldown current enabled (factory default)|
 |o&lt;n&gt;|R/W|0|Relay (O) &lt;n&gt; (1 - 4) open|
 |o&lt;n&gt;|R/W|1|Relay (O) &lt;n&gt; (1 - 4) closed|
 |o&lt;n&gt;|R|F|Relay (O) &lt;n&gt; (1 - 4) fault while open|
@@ -189,10 +198,10 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_enabled_*|R/W|0|Analog converter disabled (power off)|
-|_enabled_*|R/W|1|Analog converter enabled (factory default)|
-|_hsf_*|R/W|0|High speed filter for AV/AI inputs disabled (factory default)|
-|_hsf_*|R/W|1|High speed filter for AV/AI inputs enabled|
+|*enabled*\*|R/W|0|Analog converter disabled (power off)|
+|*enabled*\*|R/W|1|Analog converter enabled (factory default)|
+|*hsf*\*|R/W|0|High speed filter for AV/AI inputs disabled (factory default)|
+|*hsf*\*|R/W|1|High speed filter for AV/AI inputs enabled|
 |*av&lt;n&gt;_mode**|R/W|0|AV &lt;n&gt; (1 - 4) input disabled (FW >= 1.3)|
 |*av&lt;n&gt;_mode**|R/W|U|AV &lt;n&gt; (1 - 4) unipolar mode (range 0V - +20V) (factory default)|
 |*av&lt;n&gt;_mode**|R/W|B|AV &lt;n&gt; (1 - 4) bipolar mode (range -10V - +10V)|
@@ -221,13 +230,13 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_vso_enabled_*|R/W|0|VSO output disabled|
-|_vso_enabled_*|R/W|1|VSO output enabled (factory default)|
-|_vso_*|R/W|&lt;val&gt;|VSO voltage value in mV (11500 - 24500) (factory default: 12000)|
+|*vso_enabled*\*|R/W|0|VSO output disabled|
+|*vso_enabled*\*|R/W|1|VSO output enabled (factory default)|
+|*vso*\*|R/W|&lt;val&gt;|VSO voltage value in mV (11500 - 24500) (factory default: 12000)|
 |vso_mon_v|R|&lt;val&gt;|Actual voltage measured on VSO, in mV|
 |vso_mon_i|R|&lt;val&gt;|Current drain measured on VSO, in mA|
-|_5vo_enabled_*|R/W|0|5VO output disabled|
-|_5vo_enabled_*|R/W|1|5VO output enabled|
+|*5vo_enabled*\*|R/W|0|5VO output disabled|
+|*5vo_enabled*\*|R/W|1|5VO output enabled|
 
 ### Watchdog - `/sys/class/ionopimax/watchdog/`
 
@@ -241,12 +250,12 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |heartbeat|W|0|Set watchdog heartbeat line low|
 |heartbeat|W|1|Set watchdog heartbeat line high|
 |heartbeat|W|F|Flip watchdog heartbeat state|
-|_enable_mode_*|R/W|D|Watchdog normally disabled (factory default)|
-|_enable_mode_*|R/W|A|Watchdog always enabled (ignores /enabled value)|
-|_timeout_*|R/W|&lt;t&gt;|Watchdog heartbeat timeout, in seconds (1 - 65535). Factory default: 60|
-|_down_delay_*|R/W|&lt;t&gt;|Forced shutdown delay from the moment the timeout is expired and the shutdown cycle has not been enabled, in seconds (1 - 65535). Factory default: 60|
-|_sd_switch_*|R/W|&lt;n&gt;|Switch boot from SDA/SDB after &lt;n&gt; consecutive watchdog resets, if no heartbeat is detected. A value of n > 1 can be used with /enable_mode set to A only; if /enable_mode is set to D, then /sd_switch is set automatically to 1|
-|_sd_switch_*|R/W|0|SD switch on watchdog reset disabled (factory default)|
+|*enable_mode*\*|R/W|D|Watchdog normally disabled (factory default)|
+|*enable_mode*\*|R/W|A|Watchdog always enabled (ignores /enabled value)|
+|*timeout*\*|R/W|&lt;t&gt;|Watchdog heartbeat timeout, in seconds (1 - 65535). Factory default: 60|
+|*down_delay*\*|R/W|&lt;t&gt;|Forced shutdown delay from the moment the timeout is expired and the shutdown cycle has not been enabled, in seconds (1 - 65535). Factory default: 60|
+|*sd_switch*\*|R/W|&lt;n&gt;|Switch boot from SDA/SDB after &lt;n&gt; consecutive watchdog resets, if no heartbeat is detected. A value of n > 1 can be used with /enable_mode set to A only; if /enable_mode is set to D, then /sd_switch is set automatically to 1|
+|*sd_switch*\*|R/W|0|SD switch on watchdog reset disabled (factory default)|
 
 ### Power - `/sys/class/ionopimax/power/`
 
@@ -254,22 +263,22 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |----|:---:|:-:|-----------|
 |down_enabled|R/W|0|Delayed shutdown cycle disabled|
 |down_enabled|R/W|1|Delayed shutdown cycle enabled|
-|_down_delay_*|R/W|&lt;t&gt;|Shutdown delay from the moment it is enabled, in seconds (1 - 65535). Factory default: 60|
-|_off_time_*|R/W|&lt;t&gt;|Duration of power-off, in seconds (1 - 65535). Factory default: 5|
-|_up_delay_*|R/W|&lt;t&gt;|Power-up delay after main power is restored, in seconds (0 - 65535). Factory default: 0|
-|_down_enable_mode_*|R/W|I|Immediate (factory default): when shutdown is enabled, Iono will immediately initiate the power-cycle, i.e. wait for the time specified in /down_delay and then power off the Pi board for the time specified in /off_time|
-|_down_enable_mode_*|R/W|A|Arm: enabling shutdown will arm the shutdown procedure, but will not start the power-cycle until the shutdown enable line goes low again (i.e. shutdown disabled or Raspberry Pi switched off). After the line goes low, Iono will initiate the power-cycle|
-|_up_mode_*|R/W|A|Always: if shutdown is enabled when the main power is not present, only the Raspberry Pi is turned off, and the power is always restored after the power-off time, even if running on battery, with no main power present|
-|_up_mode_*|R/W|M|Main power (factory default): if shutdown is enabled when the main power is not present, Iono is fully powered down after the shutdown wait time, and powered up again only when the main power is restored|
-|_sd_switch_|R/W|1|Switch boot from SDA/SDB at every power-cycle|
-|_sd_switch_|R/W|0|SD switch at power-cycle disabled (factory default)|
+|*down_delay*\*|R/W|&lt;t&gt;|Shutdown delay from the moment it is enabled, in seconds (1 - 65535). Factory default: 60|
+|*off_time*\*|R/W|&lt;t&gt;|Duration of power-off, in seconds (1 - 65535). Factory default: 5|
+|*up_delay*\*|R/W|&lt;t&gt;|Power-up delay after main power is restored, in seconds (0 - 65535). Factory default: 0|
+|*down_enable_mode*\*|R/W|I|Immediate (factory default): when shutdown is enabled, Iono will immediately initiate the power-cycle, i.e. wait for the time specified in /down_delay and then power off the Pi board for the time specified in /off_time|
+|*down_enable_mode*\*|R/W|A|Arm: enabling shutdown will arm the shutdown procedure, but will not start the power-cycle until the shutdown enable line goes low again (i.e. shutdown disabled or Raspberry Pi switched off). After the line goes low, Iono will initiate the power-cycle|
+|*up_mode*\*|R/W|A|Always: if shutdown is enabled when the main power is not present, only the Raspberry Pi is turned off, and the power is always restored after the power-off time, even if running on battery, with no main power present|
+|*up_mode*\*|R/W|M|Main power (factory default): if shutdown is enabled when the main power is not present, Iono is fully powered down after the shutdown wait time, and powered up again only when the main power is restored|
+|*sd_switch*|R/W|1|Switch boot from SDA/SDB at every power-cycle|
+|*sd_switch*|R/W|0|SD switch at power-cycle disabled (factory default)|
 
 ### UPS - `/sys/class/ionopimax/ups/`
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_enabled_*|R/W|0|UPS disabled|
-|_enabled_*|R/W|1|UPS enabled (factory default)|
+|*enabled*\*|R/W|0|UPS disabled|
+|*enabled*\*|R/W|1|UPS enabled (factory default)|
 |battery|R|0|Running on main power|
 |battery|R|1|Running on battery power|
 |status|R|0|UPS status: idle|
@@ -285,10 +294,10 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |battery_charge|R|&lt;n&gt;|Estimated battery charge percentage|
 |charger_mon_v|R|&lt;val&gt;|Voltage measured on battery charger output, in mV|
 |charger_mon_i|R|&lt;val&gt;|Current drain measured on battery charger output, in mA|
-|_battery_capacity_*|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Writable only while UPS disabled. Factory default: 800|
-|_battery_v_*|R/W|&lt;n&gt;|Voltage rating of the battery in mV. Accepted values: 12000 or 24000. factory default: 12000|
-|_battery_i_max_*|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Writable only while UPS disabled. Factory default: 0 |
-|_power_delay_*|R/W|&lt;t&gt;|UPS automatic power-cycle timeout, in seconds (0 - 65535). Iono will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
+|*battery_capacity*\*|R/W|&lt;c&gt;|Battery capacity in mAh (100 - 60000). Writable only while UPS disabled. Factory default: 800|
+|*battery_v*\*|R/W|&lt;n&gt;|Voltage rating of the battery in mV. Accepted values: 12000 or 24000. factory default: 12000|
+|*battery_i_max*\*|R/W|&lt;c&gt;|Maximum charging current allowed. If set to zero, the value is derived from the battery capacity. Writable only while UPS disabled. Factory default: 0 |
+|*power_delay*\*|R/W|&lt;t&gt;|UPS automatic power-cycle timeout, in seconds (0 - 65535). Iono will automatically initiate a delayed power-cycle (just like when /power/down_enabled is set to 1) if the main power source is not available for the number of seconds set. A value of 0 (factory default) disables the automatic power-cycle|
 
 ### Power Supply Input - `/sys/class/ionopimax/power_in/`
 
@@ -301,16 +310,16 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_sdx_enabled_*|R/W|1|SDX bus enabled (factory default)|
-|_sdx_enabled_*|R/W|0|SDX bus disabled|
+|*sdx_enabled*\*|R/W|1|SDX bus enabled (factory default)|
+|*sdx_enabled*\*|R/W|0|SDX bus disabled|
 |sdx_enabled|R/W|2|SDX bus disabled, reset to enabled upon power cycle (FW ver. >= 1.2)|
-|_sd1_enabled_*|R/W|1|SD1 bus enabled|
-|_sd1_enabled_*|R/W|0|SD1 bus disabled (factory default)|
+|*sd1_enabled*\*|R/W|1|SD1 bus enabled|
+|*sd1_enabled*\*|R/W|0|SD1 bus disabled (factory default)|
 |sd1_enabled|R/W|2|SD1 bus enabled, reset to disabled upon power cycle (FW ver. >= 1.2)|
-|_sdx_default_|R/W|A|At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
-|_sdx_default_|R/W|B|At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
-|_sdx_routing_|R/W|A|SDX bus routed to SDA and SD1 bus to SDB (factory default)|
-|_sdx_routing_|R/W|B|SDX bus routed to SDB and SD1 bus to SDA|
+|*sdx_default*|R/W|A|At power-up, SDX bus routed to SDA and SD1 bus to SDB by default (factory default)|
+|*sdx_default*|R/W|B|At power-up, SDX bus routed to SDB and SD1 bus to SDA, by default|
+|*sdx_routing*|R/W|A|SDX bus routed to SDA and SD1 bus to SDB (factory default)|
+|*sdx_routing*|R/W|B|SDX bus routed to SDB and SD1 bus to SDA|
 
 ### USB - `/sys/class/ionopimax/usb/`
 
@@ -325,8 +334,8 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_always_on_*|R/W|0|The fan will activate automatically based on system state (factory default)|
-|_always_on_*|R/W|1|Fan always active|
+|*always_on*\*|R/W|0|The fan will activate automatically based on system state (factory default)|
+|*always_on*\*|R/W|1|Fan always active|
 |status|R|0|Fan inactive|
 |status|R|1|Fan active|
 
@@ -353,12 +362,12 @@ Requires FW version >= 1.6
 
 |File|R/W|Value|Description|
 |----|:---:|:-:|-----------|
-|_enabled_*|R/W|0|Expansion bus disabled (factory default)|
-|_enabled_*|R/W|1|Expansion bus enabled|
+|*enabled*\*|R/W|0|Expansion bus disabled (factory default)|
+|*enabled*\*|R/W|1|Expansion bus enabled|
 |aux|R|0|Expansion bus auxiliary line low|
 |aux|R|1|Expansion bus auxiliary line high|
-|_5vx_*|R/W|0|Expansion bus 5V power off (factory default)|
-|_5vx_*|R/W|1|Expansion bus 5V power on|
+|*5vx*\*|R/W|0|Expansion bus 5V power off (factory default)|
+|*5vx*\*|R/W|1|Expansion bus 5V power on|
 
 ### System state - `/sys/class/ionopimax/sys_state/`
 
