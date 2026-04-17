@@ -1,10 +1,10 @@
 obj-m += ionopimax.o
 
 ionopimax-objs := module.o
-ionopimax-objs += commons/commons.o
-ionopimax-objs += gpio/gpio.o
-ionopimax-objs += wiegand/wiegand.o
-ionopimax-objs += atecc/atecc.o
+ionopimax-objs += commons/utils/utils.o
+ionopimax-objs += commons/gpio/gpio.o
+ionopimax-objs += commons/wiegand/wiegand.o
+ionopimax-objs += commons/atecc/atecc.o
 
 SOURCE_DIR := $(if $(src),$(src),$(CURDIR))
 IONOPIMAX_VERSION := $(strip $(shell cat $(SOURCE_DIR)/VERSION))
