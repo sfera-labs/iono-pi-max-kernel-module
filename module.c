@@ -3607,7 +3607,8 @@ struct ionopimax_i2c_data {
 	struct mutex update_lock;
 };
 
-struct GpioBean* gpioGetBean(struct device *dev, struct device_attribute *attr) {
+struct GpioBean* gpioGetBean(struct device *dev, struct device_attribute *attr,
+                             const char **vals) {
 	struct DeviceAttrBean *dab;
 	dab = container_of(attr, struct DeviceAttrBean, devAttr);
 	if (dab == NULL) {
