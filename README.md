@@ -7,7 +7,7 @@ It gives access to all Iono Pi Max functionalities and configuration options via
 [![Build tests [stable oldstable]](https://github.com/sfera-labs/iono-pi-max-kernel-module/actions/workflows/build-apt.yml/badge.svg)](https://github.com/sfera-labs/iono-pi-max-kernel-module/actions/workflows/build-apt.yml)
 [![Build tests [firmware]](https://github.com/sfera-labs/iono-pi-max-kernel-module/actions/workflows/build-fw.yml/badge.svg)](https://github.com/sfera-labs/iono-pi-max-kernel-module/actions/workflows/build-fw.yml)
 
-## Compile and Install
+## Installation
 
 *For installation on Ubuntu [read this](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/kernel-modules-ubuntu.md).*
 
@@ -44,7 +44,11 @@ Register, build and install with DKMS:
     sudo dkms build -m ionopimax -v $(cat VERSION)
     sudo dkms install -m ionopimax -v $(cat VERSION)
 
-### Advanced installation mode: manual make install (running kernel only)
+### Alternative installation mode: manual install for running kernel only
+
+<details>
+
+<summary>Show</summary>
 
 Use this only if you specifically want to install for the current running kernel version only.
 
@@ -53,6 +57,8 @@ Use this only if you specifically want to install for the current running kernel
     sudo make install
 
 Manual mode does not provide automatic rebuild on kernel upgrades.
+
+</details>
 
 ### Enable overlay at boot
 
