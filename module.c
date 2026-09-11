@@ -1,7 +1,7 @@
 /*
  * ionopimax
  *
- *     Copyright (C) 2020-2025 Sfera Labs S.r.l.
+ *     Copyright (C) 2020-2026 Sfera Labs S.r.l.
  *
  *     For information, visit https://www.sferalabs.cc
  *
@@ -1824,6 +1824,246 @@ static struct DeviceAttrBean devAttrBeansDigitalOut[] = {
 			.sign = false,
 			.vals = NULL,
 		},
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc1_freq",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 56,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc1_duty",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 57,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc1_cycles",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 58,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc2_freq",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 59,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc2_duty",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 60,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc2_cycles",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 61,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc3_freq",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 62,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc3_duty",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 63,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc3_cycles",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 64,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc4_freq",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 65,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc4_duty",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 66,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
+	},
+
+	{
+		.devAttr = {
+			.attr = {
+				.name = "oc4_cycles",
+				.mode = 0660,
+			},
+			.show = devAttrI2c_show,
+			.store = devAttrI2c_store,
+		},
+		.regSpecs = {
+			.reg = 67,
+			.len = 2,
+			.maskedReg = false,
+			.mask = 0xffff,
+			.shift = 0,
+			.sign = false,
+			.vals = NULL,
+		}
 	},
 
 	{ }
