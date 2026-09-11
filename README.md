@@ -192,7 +192,7 @@ The debounce state of each digital input at system start is UNDEFINED (-1), beca
 |oc&lt;n&gt;|R/W|1|Open collector (OC) &lt;n&gt; (1 - 4) closed|
 |oc&lt;n&gt;|R|F|Open collector (OC) &lt;n&gt; (1 - 4) fault open|
 |oc&lt;n&gt;|R|S|Open collector (OC) &lt;n&gt; (1 - 4) short circuit|
-|oc&lt;n&gt;_freq<br/><br/>oc&lt;n&gt;_duty<br/><br/>oc&lt;n&gt;_cycles<br/><br/>(FW ver. >= 2.5)|R/W||Open collector (OC) &lt;n&gt; (1 - 4) PWM control:<br/><ul><li>`freq`: frequency in Hz, range 0-1000, 0 = disabled (default).</li><li>`duty`: duty cycle represented as the ratio `duty`/1000, range 1–999 (default: 500). The minimum half-period is limited to 1 ms.<li>`cycles`: number of repetitions, 0 = indefinite, range 0–65535</li></ul>When any property is written, the PWM is restarted.|
+|oc&lt;n&gt;_freq<br/><br/>oc&lt;n&gt;_duty<br/><br/>oc&lt;n&gt;_cycles|R/W||Open collector (OC) &lt;n&gt; (1 - 4) PWM control (FW ver. >= 2.5):<br/><ul><li>`freq`: frequency in Hz, range 0-1000, 0 = disabled (default).</li><li>`duty`: duty cycle represented as the ratio `duty`/1000, range 1–999 (default: 500). The minimum half-period is limited to 1 ms.<li>`cycles`: number of repetitions, range 0–65535, 0 = indefinite (default)</li></ul>When any property is written, the PWM is restarted.|
 
 ### Digital I/O DTx - `/sys/class/ionopimax/digital_io/`
 
