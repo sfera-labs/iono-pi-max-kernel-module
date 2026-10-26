@@ -1,6 +1,6 @@
 # Iono Pi Max driver kernel module
 
-Raspberry Pi OS (Debian) Kernel module for [Iono Pi Max](https://www.sferalabs.cc/product/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
+Debian-based Linux kernel module for [Iono Pi Max](https://www.sferalabs.cc/product/iono-pi-max/) - the industrial controller based on the Raspberry Pi Compute Module.
 
 It gives access to all Iono Pi Max functionalities and configuration options via sysfs virtual files.
 
@@ -9,77 +9,34 @@ It gives access to all Iono Pi Max functionalities and configuration options via
 
 ## Installation
 
-*For installation on Ubuntu [read this](https://github.com/sfera-labs/knowledge-base/blob/main/raspberrypi/kernel-modules-ubuntu.md).*
+For source-based installation, see this [installation guide](https://github.com/sfera-labs/sl-kmod-commons/blob/main/INSTALLATION.md).
 
-Make sure your system is updated:
+If the Sfera Labs APT repository is not configured yet, [add the repository and install its keyring](https://github.com/sfera-labs/apt#install).
+
+Install the package:
 
     sudo apt update
-    sudo apt upgrade
-
-If you are using Iono Pi Max with a Raspberry Pi CM **4S** and a **32-bit** OS, add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line: [[why?](https://github.com/raspberrypi/firmware/issues/1795)]
-
-    arm_64bit=0
+    sudo apt install ionopimax-dkms
     
-Reboot:
+The package registers the module with DKMS, which builds it for kernels with matching headers and rebuilds it when new kernel headers are installed. It also installs the device-tree overlays and udev rules.
 
-    sudo reboot
-
-After reboot, install required tools:
-
-    sudo apt install git device-tree-compiler dkms linux-headers-$(uname -r)
-
-Clone this repo:
-
-    git clone --depth 1 https://github.com/sfera-labs/iono-pi-max-kernel-module.git
-
-    cd iono-pi-max-kernel-module
-
-### Recommended installation mode: DKMS
-
-This is the recommended mode. It automatically rebuilds and reinstalls the module when new kernel versions are installed.
-
-Register, build and install with DKMS:
-
-    sudo dkms add .
-    sudo dkms build -m $(cat MODULE_NAME) -v $(cat VERSION)
-    sudo dkms install -m $(cat MODULE_NAME) -v $(cat VERSION)
-
-### Alternative installation mode: manual install for running kernel only
-
-<details>
-
-<summary>Show</summary>
-
-Use this only if you specifically want to install for the current running kernel version only.
-
-    make clean
-    make
-    sudo make install
-
-Manual mode does not provide automatic rebuild on kernel upgrades.
-
-</details>
-
-### Enable overlay at boot
-
-Add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line:
+Select the overlay by adding this to `/boot/firmware/config.txt`:
 
     dtoverlay=ionopimax
 
-The install process places `99-ionopimax-serial.rules`, which makes sure the USB dev connected to Iono's RS-485 (or RS-232 if inverted) interface is always available under `/dev/ionopimax-serial`.
+For Iono Pi Max with Raspberry Pi CM4S, on legacy 32-bit Raspberry Pi OS versions that support this option, `arm_64bit=0` may be required. Add it to the same file. [[why?](https://github.com/raspberrypi/firmware/issues/1795)]
 
-### Optional non-root access to `/sys/class/ionopimax`
+The package also installs `99-ionopimax-serial.rules`, which makes the USB device connected to Iono Pi Max's RS-485 (or RS-232 if inverted) interface available under `/dev/ionopimax-serial`.
 
-The install process places `99-ionopimax.rules`, which sets owner group `ionopimax` for sysfs entries. To access the sysfs interface without superuser privileges, create the group and add your user, e.g. for user "pi":
-
-    sudo groupadd ionopimax
-    sudo usermod -a -G ionopimax pi
-
-To enable SocketCAN support for the CAN FD/CAN 2.0 controller (MCP2518FD), add to `/boot/firmware/config.txt` (`/boot/config.txt` in older versions) the following line:
+To enable SocketCAN support for the CAN FD/CAN 2.0 controller (MCP2518FD), add this line to `config.txt`:
 
     dtoverlay=mcp251xfd,spi0-0,interrupt=28
 
-Reboot:
+The install process creates the `ionopimax` group and places `99-ionopimax.rules`, which sets it as the owner group for sysfs entries. To access the sysfs interface without superuser privileges, add your user to the group, e.g. for user "pi":
+
+    sudo usermod -a -G ionopimax pi
+
+Finally, reboot to apply the configuration:
 
     sudo reboot
 
